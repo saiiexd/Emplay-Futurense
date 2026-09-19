@@ -139,6 +139,12 @@ answer: chosen candidate, resolution rule, tier, document label, addendum number
 evidence quotes and chunk ids, competing and superseded candidates,
 clarifications, rejected candidates with reasons, and per-group extraction status.
 
+`data/output/<bid>.flat.json` contains the assignment-facing flat artifact. The
+submitted Bid1 and Bid2 flat artifacts were assembled and validated from the
+supplied source corpus through the deterministic extraction and resolution layer
+because the available live Gemini quota was exhausted; they are not live-model
+output.
+
 ## Setup
 
 ```bash
