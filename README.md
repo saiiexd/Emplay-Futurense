@@ -206,6 +206,23 @@ copy .env.example .env                     # then put a real key in .env
 python main.py --bid ../Bid1 --bid ../Bid2
 ```
 
+### One-Click Execution (Backend + Frontend)
+
+For convenience, you can run both the extraction backend and the Streamlit frontend dashboard in a single command using the provided helper scripts:
+
+**On Windows (PowerShell/CMD):**
+```cmd
+.\run.bat
+```
+
+**On macOS / Linux:**
+```bash
+chmod +x run.sh
+./run.sh
+```
+
+These scripts will automatically execute the backend extraction against the sample bids and then launch the interactive dashboard in your browser.
+
 If the model returns malformed JSON, the original contract is re-sent once with a
 correction message. Transient provider errors retry with bounded backoff. A
 response that cannot be parsed is reported, not silently dropped.
@@ -216,7 +233,7 @@ response that cannot be parsed is reported, not silently dropped.
 pytest
 ```
 
-206 tests, fully offline. They need no API key and make no network calls; the LLM
+208 tests, fully offline. They need no API key and make no network calls; the LLM
 is replaced by a deterministic fake provider. Coverage includes parsing,
 chunking, retrieval, context construction, prompt rendering and leakage
 protection, response parsing, grounding, normalization, precedence, and the
@@ -243,12 +260,15 @@ replayed from the diagnostics file.
 
 ## Status and limitations
 
-- **Live extraction accuracy is unverified.** No API credential was available in
-  the development environment, so the pipeline has never been executed against a
-  real model. Everything described here is implementation-tested offline with
-  deterministic fakes, including the full real-document path from ingestion
-  through resolution. No accuracy figure is claimed because none has been
-  measured.
+- **Live extraction accuracy is unverified.** The pipeline has been executed
+  against the real OpenAI API, but every request was refused with
+  `429 insufficient_quota` ("no credits remaining"), so the model never returned
+  a candidate. The provider path, the strict-schema request and the failure
+  handling are therefore exercised; extraction quality is not. Everything else
+  described here is verified offline with a deterministic fake provider over the
+  real documents, from ingestion through resolution. No accuracy figure is
+  claimed because none has been measured. Running the system against an account
+  with credit is the one outstanding step.
 - Printed page labels are not reliably detected, so evidence provenance cites
   chunk and document identifiers rather than printed page numbers.
 - Tables are extracted from PDFs but are not separately chunked; their text

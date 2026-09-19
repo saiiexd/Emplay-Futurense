@@ -111,7 +111,9 @@ def main():
                 except Exception as e:
                     st.error(f"Processing failed: {e}")
                     
-        st.markdown(f"**Embedding Client:** {'Fake' if os.environ.get('USE_FAKE_EMBEDDINGS', 'true').lower() == 'true' else 'Real (OpenAI)'}")
+        # This dashboard always uses the deterministic offline embedding client,
+        # so it needs no API key. The CLI pipeline chooses via --embeddings.
+        st.markdown("**Embedding Client:** Offline / Deterministic")
                     
     # --- MAIN CONTENT ---
     if st.session_state.processed:
@@ -119,7 +121,7 @@ def main():
         m_col1, m_col2, m_col3 = st.columns(3)
         m_col1.metric("Parsed Documents", st.session_state.metrics["doc_count"])
         m_col2.metric("Total Chunks", st.session_state.metrics["chunk_count"])
-        m_col3.metric("Pipeline Stage", "Stage 4.0 Retrieval/Evidence")
+        m_col3.metric("Mode", "Offline inspection")
         
         st.divider()
         
