@@ -161,6 +161,12 @@ Copy `.env.example` to `.env` (git-ignored) and configure Gemini only when live
 extraction is available. The `fake` provider is deterministic and is used by the
 offline test suite; it makes no network calls.
 
+The offline end-to-end regression uses source-backed test fixtures with the
+supplied Bid1 and Bid2 documents. It executes ingestion, chunking, retrieval,
+ContextBuilder, all six extraction groups, strict response parsing, grounding,
+rule candidates, deterministic resolution, and final serialization without
+external inference.
+
 ```
 LLM_PROVIDER=gemini
 GEMINI_API_KEY=...

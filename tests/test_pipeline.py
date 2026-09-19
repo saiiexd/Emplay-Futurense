@@ -32,6 +32,7 @@ from src.validation.canonical import find_canonical_match  # noqa: E402
 from src.validation.grounding import GroundingValidator  # noqa: E402
 
 from tests.fixtures.corpus_expectations import BID1, BID2  # noqa: E402
+from tests.fixtures.offline_provider import SourceBackedOfflineResponder  # noqa: E402
 
 BID1_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../Bid1"))
 BID2_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../Bid2"))
@@ -89,6 +90,17 @@ def fake_engine_factory(registry):
     return ExtractionEngine(
         FakeLLMProvider(default=evidence_responder), registry=registry, sleep=no_sleep
     )
+
+
+def source_backed_engine_factory(bid_id, providers):
+    """Build the real extraction engine with a test-only source-backed provider."""
+    def factory(registry):
+        responder = SourceBackedOfflineResponder(bid_id)
+        provider = FakeLLMProvider(default=responder)
+        providers.append(provider)
+        return ExtractionEngine(provider, registry=registry, sleep=no_sleep)
+
+    return factory
 
 
 @unittest.skipUnless(os.path.isdir(BID1_DIR), "Bid1 corpus not available")
@@ -257,6 +269,66 @@ class TestFullPipelineOffline(unittest.TestCase):
 
         resolution = CandidateResolver(registry).resolve_field("bid_number", [grounded])
         self.assertEqual(resolution.status, FieldStatus.not_found.value)
+
+
+@unittest.skipUnless(os.path.isdir(BID1_DIR) and os.path.isdir(BID2_DIR), "bid corpora not available")
+class TestBothBidsCompleteOfflinePipeline(unittest.TestCase):
+    """Both supplied corpora complete all six real extraction groups offline."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.results = {}
+        cls.providers = {}
+        for bid_id, bid_dir in (("Bid1", BID1_DIR), ("Bid2", BID2_DIR)):
+            providers = []
+            cls.results[bid_id] = run_pipeline(
+                bid_dir,
+                source_backed_engine_factory(bid_id, providers),
+                embeddings="fake",
+            )
+            cls.providers[bid_id] = providers[0]
+
+    def test_all_six_groups_execute_for_both_bids(self):
+        for bid_id, result in self.results.items():
+            self.assertEqual(list(result.group_results), config.GROUP_ORDER, bid_id)
+            self.assertEqual(len(self.providers[bid_id].calls), 6, bid_id)
+            for group, group_result in result.group_results.items():
+                self.assertEqual(group_result.status, "ok", f"{bid_id}/{group}: {group_result.error}")
+
+    def test_outputs_have_the_exact_assignment_contract(self):
+        expected_labels = [spec.assignment_label for spec in FIELD_CATALOG.values()]
+        for bid_id, result in self.results.items():
+            self.assertEqual(list(result.public_json), expected_labels, bid_id)
+            self.assertEqual(len(result.public_json), 20)
+
+    def test_every_non_null_output_value_is_string_or_null(self):
+        def flat_value(value):
+            if value is None or isinstance(value, str):
+                return value
+            if isinstance(value, list):
+                if value and all(isinstance(item, dict) for item in value):
+                    contacts = []
+                    for contact in value:
+                        parts = [contact.get("phone"), contact.get("email")]
+                        details = "; ".join(part for part in parts if part)
+                        contacts.append(f"{contact.get('name')} ({details})")
+                    return "; ".join(contacts)
+                return "; ".join(str(item) for item in value)
+            self.fail(f"unexpected structured output value: {value!r}")
+
+        for bid_id, result in self.results.items():
+            for label, value in result.public_json.items():
+                self.assertTrue(
+                    isinstance(flat_value(value), (str, type(None))),
+                    f"{bid_id}/{label}: {value!r}",
+                )
+
+    def test_retrieval_context_grounding_and_resolution_ran(self):
+        for bid_id, result in self.results.items():
+            self.assertGreater(len(result.grounded), 0, bid_id)
+            self.assertTrue(any(r.contributing for r in result.resolutions.values()), bid_id)
+            for group_result in result.group_results.values():
+                self.assertTrue(group_result.parsed.coverage, bid_id)
 
 
 class TestFailedRunWritesNoArtifact(unittest.TestCase):
