@@ -164,15 +164,47 @@ a vendor SDK. Decoding uses temperature 0 and a fixed seed. Without a key the
 program exits with a clear message rather than guessing - it never falls back to
 fabricated output.
 
-## Running
+## Running the whole system
+
+From `Project/`, with `.env` configured, this one command runs everything -
+ingestion, chunking, retrieval, context construction, the six LLM extraction
+calls, parsing, grounding, precedence resolution, and final JSON output - for
+both supplied bids:
 
 ```bash
 python main.py --bid ../Bid1 --bid ../Bid2
 ```
 
+Point `--bid` at any folder of PDF/HTML documents; repeat it for more bids.
+
+It writes four files into `data/output/`:
+
+```
+Bid1.json                 Bid1.diagnostics.json
+Bid2.json                 Bid2.diagnostics.json
+```
+
+and prints a per-field summary showing, for each of the 20 fields, whether it
+resolved, which rule decided it, and which document it came from.
+
+**Exit codes:** `0` all groups completed · `2` provider not configured (missing
+key) · `3` the run finished but one or more groups failed at the provider, so
+the output is incomplete rather than a genuine "not found".
+
 Options: `--out` (default `data/output`), `--embeddings fake|openai`
 (default `fake`, which keeps runs cheap and deterministic; `openai` enables the
 real semantic retrieval channel), `--max-correction-retries`.
+
+### First run, from a clean checkout
+
+```bash
+cd Project
+python -m venv venv
+venv\Scripts\activate                      # Windows; use source venv/bin/activate elsewhere
+pip install -r requirements.txt
+copy .env.example .env                     # then put a real key in .env
+python main.py --bid ../Bid1 --bid ../Bid2
+```
 
 If the model returns malformed JSON, the original contract is re-sent once with a
 correction message. Transient provider errors retry with bounded backoff. A

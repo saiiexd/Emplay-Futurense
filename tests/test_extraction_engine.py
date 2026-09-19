@@ -89,6 +89,31 @@ class TestProviderAbstraction(unittest.TestCase):
         with self.assertRaises(ProviderConfigError):
             build_provider("not-a-provider")
 
+    def test_exhausted_quota_is_detected_as_fatal(self):
+        """Regression: a 429 for an empty balance must not be retried.
+
+        Observed live: every call returned 429 insufficient_quota, and treating
+        it as transient burned the full retry budget on every group.
+        """
+        from src.extraction.llm_client import _is_quota_exhausted
+
+        class FakeQuotaError(Exception):
+            body = {"error": {"code": "credit_balance_exhausted", "type": "insufficient_quota",
+                              "message": "You have no credits remaining."}}
+
+        class FakeRateLimit(Exception):
+            body = {"error": {"code": "rate_limit_exceeded", "type": "requests",
+                              "message": "Rate limit reached, please slow down."}}
+
+        self.assertTrue(_is_quota_exhausted(FakeQuotaError()))
+        self.assertFalse(_is_quota_exhausted(FakeRateLimit()))
+        # Also detectable when the SDK exposes only a message string.
+        self.assertTrue(_is_quota_exhausted(Exception("429 - insufficient_quota")))
+
+    def test_sdk_retries_are_disabled_so_the_engine_owns_the_budget(self):
+        provider = OpenAIChatProvider(api_key="sk-not-a-real-key", model="test-model")
+        self.assertEqual(provider._client.max_retries, 0)
+
     def test_fake_provider_records_calls(self):
         provider = FakeLLMProvider(script=["{}"])
         provider.complete([{"role": "user", "content": "hi"}], max_output_tokens=10)

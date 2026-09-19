@@ -45,6 +45,7 @@ def main():
             provider, registry=registry, max_correction_retries=args.max_correction_retries
         )
 
+    exit_code = 0
     for bid_dir in args.bid:
         result = run_pipeline(bid_dir, engine_factory, embeddings=args.embeddings)
         paths = write_outputs(result, args.out)
@@ -56,7 +57,17 @@ def main():
             marker = "-" if resolution.status == "not_found" else "+"
             source = resolution.chosen.provenance.doc_label if resolution.chosen else ""
             print(f"  {marker} {field_name:26} {resolution.status:12} {resolution.rule:28} {source}")
-    return 0
+
+        # A run where the model never answered produced an empty record, not an
+        # empty corpus. Report that through the exit code so it cannot be
+        # mistaken for a successful extraction.
+        failed = [g for g, r in result.group_results.items() if r.status == "provider_error"]
+        if failed:
+            print(f"  WARNING: {len(failed)}/{len(result.group_results)} group(s) failed at the "
+                  f"provider: {', '.join(failed)}", file=sys.stderr)
+            exit_code = 3
+
+    return exit_code
 
 
 if __name__ == "__main__":

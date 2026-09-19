@@ -24,6 +24,23 @@ class ProviderCallError(RuntimeError):
     """Transient provider failure (timeout, rate limit, 5xx). Safe to retry."""
 
 
+#: Markers OpenAI uses when a 429 means "no balance" rather than "slow down".
+_QUOTA_MARKERS = ("insufficient_quota", "credit_balance_exhausted", "no credits remaining")
+
+
+def _is_quota_exhausted(exc: Exception) -> bool:
+    """True when a 429 reports an exhausted balance, which retrying cannot fix."""
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict):
+        error = body.get("error") or {}
+        for field in ("code", "type"):
+            value = str(error.get(field) or "").lower()
+            if any(marker in value for marker in _QUOTA_MARKERS):
+                return True
+    text = str(exc).lower()
+    return any(marker in text for marker in _QUOTA_MARKERS)
+
+
 class LLMProvider(Protocol):
     """Minimal surface the extraction engine depends on."""
 
@@ -80,7 +97,12 @@ class OpenAIChatProvider:
 
         self._sdk = openai
         # The client holds the credential; nothing else in this object does.
-        self._client = openai.OpenAI(api_key=key, base_url=base_url) if base_url else openai.OpenAI(api_key=key)
+        # max_retries=0 because ExtractionEngine owns the retry policy; letting
+        # the SDK retry as well multiplies attempts and hides the real count.
+        client_kwargs = {"api_key": key, "max_retries": 0}
+        if base_url:
+            client_kwargs["base_url"] = base_url
+        self._client = openai.OpenAI(**client_kwargs)
 
     def __repr__(self) -> str:  # keeps the key out of tracebacks and logs
         return f"OpenAIChatProvider(model={self.model!r})"
@@ -114,12 +136,21 @@ class OpenAIChatProvider:
             response = self._client.chat.completions.create(**kwargs)
         except (sdk.AuthenticationError, sdk.PermissionDeniedError) as exc:
             raise ProviderConfigError(f"authentication rejected: {type(exc).__name__}") from exc
+        except sdk.RateLimitError as exc:
+            # A 429 means either "slow down" or "you have no credits". Only the
+            # first is worth retrying; retrying an exhausted balance just burns
+            # time and produces a misleading "provider unavailable" result.
+            if _is_quota_exhausted(exc):
+                raise ProviderConfigError(
+                    "the API account has no remaining credits or quota; "
+                    "add credits or use a different account"
+                ) from exc
+            raise ProviderCallError("transient provider failure: RateLimitError") from exc
         except sdk.BadRequestError as exc:
             # A malformed schema or unsupported parameter. Retrying sends the
             # same thing again, so surface it instead.
             raise ProviderConfigError(f"request rejected: {type(exc).__name__}: {exc}") from exc
         except (
-            sdk.RateLimitError,
             sdk.APITimeoutError,
             sdk.APIConnectionError,
             sdk.InternalServerError,
