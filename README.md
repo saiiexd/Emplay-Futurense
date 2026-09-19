@@ -223,6 +223,8 @@ replayed from the diagnostics file.
   reaches the model through normal page text.
 - Retrieval aliases in the field catalog were tuned against the two supplied
   bids. Results on those two bids are therefore not evidence of generalization.
-- `src/ui/` contains a Streamlit dashboard used during development to inspect
-  parsing, chunking and retrieval. It is a debugging aid, not part of the
-  extraction path.
+- `app.py` (with helpers in `src/ui/`) is an optional Streamlit dashboard for
+  inspecting parsing, chunking and retrieval on uploaded files. It is a
+  development aid, not part of the extraction path, and it needs no API key:
+  `streamlit run app.py`. Extraction itself runs from `main.py` so that results
+  are reproducible and written to disk.
