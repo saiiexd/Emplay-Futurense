@@ -238,15 +238,16 @@ copy .env.example .env                     # then put a real key in .env
 python main.py --bid ../Bid1 --bid ../Bid2
 ```
 
-### One-Command Backend + Streamlit
+### One-Command Offline Validation + Streamlit
 
-From the `Project/` directory, the helper script runs the complete backend for
-both supplied bids and then starts the Streamlit dashboard. The dashboard is
-started only when the backend exits successfully.
+From the `Project/` directory, the helper script runs the complete offline
+validation suite and then starts the Streamlit dashboard. This default local
+path makes no external LLM/API calls and works without a Gemini key or quota.
+The dashboard is started only when the tests pass.
 
-Before using the one-command live run, configure a provider in `.env` as shown
-above and ensure its credentials and quota are available. The backend does not
-silently fall back to fabricated results when the provider is unavailable.
+Live extraction is a separate, explicit operation. Configure `.env` with a
+valid Gemini key and available quota before running the live CLI command shown
+in the next section. The convenience scripts never call Gemini.
 
 **Windows PowerShell or Command Prompt:**
 
@@ -265,14 +266,27 @@ chmod +x run.sh
 
 The scripts perform these steps in order:
 
-1. Run `python main.py --bid ../Bid1 --bid ../Bid2`.
-2. Write the backend JSON and diagnostics to `data/output/`.
-3. Start `streamlit run app.py`.
+1. Run `pytest -q` using the deterministic fake provider test path.
+2. Start `streamlit run app.py`.
 
 Once Streamlit starts, open the URL printed in the terminal, normally
 `http://localhost:8501`. The dashboard is an inspection interface for uploaded
-PDF/HTML documents and retrieval results; extraction itself remains in the CLI
-backend.
+PDF/HTML documents and retrieval results. It does not invoke live extraction.
+
+### Explicit Live Extraction
+
+Live extraction must be started separately and requires a configured Gemini
+provider, valid credentials, and available quota:
+
+```powershell
+cd Project
+$env:LLM_PROVIDER = "gemini"
+python main.py --bid ../Bid1 --bid ../Bid2
+```
+
+On macOS/Linux, use `export LLM_PROVIDER=gemini` instead. If the provider is
+not configured or all provider calls fail, the CLI exits without writing a
+misleading null-filled result.
 
 ### Start Streamlit Only
 

@@ -9,13 +9,13 @@ if [ -f "venv/bin/activate" ]; then
 fi
 
 echo ""
-echo "[1/2] Running CLI Extraction Pipeline..."
+echo "[1/2] Running Offline Validation Suite..."
 echo "------------------------------------------"
-echo "Extraction is executed by the CLI (main.py), not by the dashboard."
-python main.py --bid ../Bid1 --bid ../Bid2
+echo "No external LLM or API calls are made."
+pytest -q
 status=$?
 if [ "$status" -ne 0 ]; then
-    echo "Extraction failed; dashboard will not start."
+    echo "Offline validation failed; dashboard will not start."
     exit "$status"
 fi
 
