@@ -259,6 +259,29 @@ class TestFullPipelineOffline(unittest.TestCase):
         self.assertEqual(resolution.status, FieldStatus.not_found.value)
 
 
+class TestFailedRunWritesNoArtifact(unittest.TestCase):
+    """A provider failure must never produce a null-filled 'result' file."""
+
+    def test_cli_refuses_to_write_when_every_group_fails(self):
+        from unittest.mock import patch
+
+        import main as cli
+        from src.extraction.llm_client import FakeLLMProvider, ProviderConfigError
+
+        # A provider whose every call fails the way a rejected credential does.
+        provider = FakeLLMProvider(script=[ProviderConfigError("credential rejected")] * 50)
+
+        with tempfile.TemporaryDirectory() as out_dir:
+            argv = ["main.py", "--bid", BID2_DIR, "--out", out_dir]
+            with patch.object(sys, "argv", argv), \
+                 patch.object(cli, "build_provider", return_value=provider):
+                exit_code = cli.main()
+
+            produced = [f for f in os.listdir(out_dir) if f.endswith(".json")]
+            self.assertEqual(produced, [], "a failed run must not write JSON artifacts")
+            self.assertEqual(exit_code, 3, "a failed run must not exit 0")
+
+
 class TestPipelineHelpers(unittest.TestCase):
     def test_group_by_field_partitions_candidates(self):
         from src.schemas.candidates import GroundedCandidate

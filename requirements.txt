@@ -9,3 +9,4 @@ rank_bm25
 openai
 numpy
 tzdata
+mistralai

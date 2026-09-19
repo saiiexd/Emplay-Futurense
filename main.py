@@ -37,7 +37,7 @@ def main():
         provider = build_provider()
     except ProviderConfigError as exc:
         print(f"Cannot start extraction: {exc}", file=sys.stderr)
-        print(f"Set {config.LLM_API_KEY_ENV} (and optionally {config.LLM_MODEL_ENV}) in .env", file=sys.stderr)
+        print("Check your .env file and ensure the required API key and provider are set.", file=sys.stderr)
         return 2
 
     def engine_factory(registry):
@@ -48,6 +48,23 @@ def main():
     exit_code = 0
     for bid_dir in args.bid:
         result = run_pipeline(bid_dir, engine_factory, embeddings=args.embeddings)
+
+        groups = result.group_results
+        failed = [g for g, r in groups.items() if r.status == "provider_error"]
+
+        # If the provider never answered, the empty record reflects a failed
+        # call, not an empty corpus. Writing it would produce a null-filled
+        # file that looks like a real extraction, so write nothing at all.
+        if groups and len(failed) == len(groups):
+            reason = next((r.error for r in groups.values() if r.error), "provider unavailable")
+            print(f"\n{result.bid_id}: extraction FAILED - every group failed at the provider.",
+                  file=sys.stderr)
+            print(f"  reason: {reason}", file=sys.stderr)
+            print(f"  no output written for {result.bid_id}: a null-filled file would "
+                  f"misrepresent a failed run as a result.", file=sys.stderr)
+            exit_code = 3
+            continue
+
         paths = write_outputs(result, args.out)
 
         summary = result.record.summary
@@ -58,13 +75,9 @@ def main():
             source = resolution.chosen.provenance.doc_label if resolution.chosen else ""
             print(f"  {marker} {field_name:26} {resolution.status:12} {resolution.rule:28} {source}")
 
-        # A run where the model never answered produced an empty record, not an
-        # empty corpus. Report that through the exit code so it cannot be
-        # mistaken for a successful extraction.
-        failed = [g for g, r in result.group_results.items() if r.status == "provider_error"]
         if failed:
-            print(f"  WARNING: {len(failed)}/{len(result.group_results)} group(s) failed at the "
-                  f"provider: {', '.join(failed)}", file=sys.stderr)
+            print(f"  WARNING: {len(failed)}/{len(groups)} group(s) failed at the "
+                  f"provider: {', '.join(failed)}; this output is incomplete.", file=sys.stderr)
             exit_code = 3
 
     return exit_code

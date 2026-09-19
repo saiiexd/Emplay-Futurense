@@ -114,6 +114,19 @@ def main():
         # This dashboard always uses the deterministic offline embedding client,
         # so it needs no API key. The CLI pipeline chooses via --embeddings.
         st.markdown("**Embedding Client:** Offline / Deterministic")
+
+        try:
+            from src.extraction.llm_client import build_provider, ProviderConfigError
+            provider = build_provider()
+            provider_name = getattr(provider, "name", "unknown").capitalize()
+            model_name = getattr(provider, "model", "unknown")
+            provider_display = f"{provider_name} — {model_name}"
+        except ProviderConfigError:
+            provider_display = "Extraction is not configured"
+        except Exception:
+            provider_display = "Extraction is not configured"
+
+        st.markdown(f"**Configured LLM provider:** {provider_display}")
                     
     # --- MAIN CONTENT ---
     if st.session_state.processed:
@@ -220,8 +233,9 @@ def main():
         with tab_extract:
             st.header("LLM Extraction")
             st.info(
-                "Extraction runs from the command line, not from this dashboard, so that "
-                "a run is reproducible and its outputs are written to disk."
+                "Extraction is strictly executed by the CLI (via main.py) and is "
+                "not invoked by this Streamlit process. This ensures runs are "
+                "reproducible and outputs are safely written to disk."
             )
             st.code("python main.py --bid <bid_directory>", language="bash")
             st.markdown(

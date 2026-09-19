@@ -151,18 +151,37 @@ pip install -r requirements.txt
 
 ## Configuring the LLM provider
 
-Copy `.env.example` to `.env` (git-ignored) and set:
+Copy `.env.example` to `.env` (git-ignored) and set one provider. **OpenRouter is
+the active default**; OpenAI and native Mistral are supported alternatives.
 
 ```
-OPENAI_API_KEY=...                 # required for a real run
-OPENAI_EXTRACTION_MODEL=gpt-4o     # any model supporting strict JSON schema output
-LLM_PROVIDER=openai
+LLM_PROVIDER=openrouter
+OPENROUTER_API_KEY=...
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_EXTRACTION_MODEL=qwen/qwen3-30b-a3b:free
 ```
+
+| `LLM_PROVIDER` | Variables it reads | Transport |
+|---|---|---|
+| `openrouter` (default) | `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`, `OPENROUTER_EXTRACTION_MODEL` | OpenAI-compatible API at `https://openrouter.ai/api/v1`, via the `openai` SDK |
+| `openai` | `OPENAI_API_KEY`, `OPENAI_EXTRACTION_MODEL` | OpenAI directly |
+| `mistral` | `MISTRAL_API_KEY`, `MISTRAL_EXTRACTION_MODEL`, `MISTRAL_BASE_URL` | native `mistralai` SDK |
+
+Exactly one provider is constructed, and it validates **only its own**
+credentials: selecting `openrouter` never requires an OpenAI or Mistral key, and
+vice versa. There is no silent fallback between providers - a misconfigured
+provider fails loudly.
 
 Provider code is isolated in `src/extraction/llm_client.py`; nothing else imports
-a vendor SDK. Decoding uses temperature 0 and a fixed seed. Without a key the
-program exits with a clear message rather than guessing - it never falls back to
-fabricated output.
+a vendor SDK. Decoding uses temperature 0 and a fixed seed. Extraction requests
+carry the strict JSON schema built from the field catalog. Without a usable key
+the program exits with a clear message rather than guessing, and **a run whose
+provider calls all fail writes no output file at all**, so a null-filled JSON can
+never be mistaken for a result.
+
+> **OpenRouter keys:** use a normal inference key from
+> <https://openrouter.ai/keys>. A *provisioning/management* key authenticates
+> against `/auth/key` but returns `401 User not found` on `/chat/completions`.
 
 ## Running the whole system
 
@@ -233,7 +252,7 @@ response that cannot be parsed is reported, not silently dropped.
 pytest
 ```
 
-208 tests, fully offline. They need no API key and make no network calls; the LLM
+249 tests, fully offline. They need no API key and make no network calls; the LLM
 is replaced by a deterministic fake provider. Coverage includes parsing,
 chunking, retrieval, context construction, prompt rendering and leakage
 protection, response parsing, grounding, normalization, precedence, and the
@@ -261,14 +280,14 @@ replayed from the diagnostics file.
 ## Status and limitations
 
 - **Live extraction accuracy is unverified.** The pipeline has been executed
-  against the real OpenAI API, but every request was refused with
-  `429 insufficient_quota` ("no credits remaining"), so the model never returned
-  a candidate. The provider path, the strict-schema request and the failure
-  handling are therefore exercised; extraction quality is not. Everything else
-  described here is verified offline with a deterministic fake provider over the
-  real documents, from ingestion through resolution. No accuracy figure is
-  claimed because none has been measured. Running the system against an account
-  with credit is the one outstanding step.
+  against the configured OpenRouter endpoint, but every request was rejected
+  (`401`), so the model never returned a candidate. The provider path, the
+  strict-schema request and the failure handling are therefore exercised;
+  extraction quality is not. Everything else described here is verified offline
+  with a deterministic fake provider over the real documents, from ingestion
+  through resolution. No accuracy figure is claimed because none has been
+  measured. Running the system with a working inference key is the one
+  outstanding step.
 - Printed page labels are not reliably detected, so evidence provenance cites
   chunk and document identifiers rather than printed page numbers.
 - Tables are extracted from PDFs but are not separately chunked; their text

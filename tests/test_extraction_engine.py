@@ -3,6 +3,7 @@ import sys
 import json
 import logging
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -113,6 +114,29 @@ class TestProviderAbstraction(unittest.TestCase):
     def test_sdk_retries_are_disabled_so_the_engine_owns_the_budget(self):
         provider = OpenAIChatProvider(api_key="sk-not-a-real-key", model="test-model")
         self.assertEqual(provider._client.max_retries, 0)
+
+    def test_mistral_config_does_not_require_openai_key(self):
+        # Regression test: Mistral configuration must not require OPENAI_API_KEY
+        with patch.dict(os.environ, {
+            config.LLM_PROVIDER_ENV: "mistral",
+            config.MISTRAL_API_KEY_ENV: "mistral-key",
+            config.MISTRAL_MODEL_ENV: "mistral-small-latest"
+        }, clear=True):
+            try:
+                provider = build_provider()
+                self.assertEqual(provider.name, "mistral")
+                self.assertEqual(getattr(provider, "model", ""), "mistral-small-latest")
+            except Exception as exc:
+                self.fail(f"build_provider() raised {type(exc).__name__} unexpectedly!")
+
+    def test_openai_config_still_requires_openai_key(self):
+        # Regression test: OpenAI configuration must still require OPENAI_API_KEY
+        with patch.dict(os.environ, {
+            config.LLM_PROVIDER_ENV: "openai"
+        }, clear=True):
+            with self.assertRaises(ProviderConfigError) as ctx:
+                build_provider()
+            self.assertIn(config.LLM_API_KEY_ENV, str(ctx.exception))
 
     def test_fake_provider_records_calls(self):
         provider = FakeLLMProvider(script=["{}"])

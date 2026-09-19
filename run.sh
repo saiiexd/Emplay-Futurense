@@ -9,11 +9,12 @@ if [ -f "venv/bin/activate" ]; then
 fi
 
 echo ""
-echo "[1/2] Running Backend Extraction Pipeline..."
+echo "[1/2] Running CLI Extraction Pipeline..."
 echo "------------------------------------------"
+echo "Extraction is executed by the CLI (main.py), not by the dashboard."
 python main.py --bid ../Bid1 --bid ../Bid2
 
 echo ""
-echo "[2/2] Starting Frontend Dashboard..."
+echo "[2/2] Starting Observability Dashboard..."
 echo "------------------------------------------"
 streamlit run app.py
