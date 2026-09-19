@@ -118,16 +118,18 @@ def main():
         # so it needs no API key. The CLI pipeline chooses via --embeddings.
         st.markdown("**Embedding Client:** Offline / Deterministic")
 
-        try:
-            from src.extraction.llm_client import build_provider, ProviderConfigError
-            provider = build_provider()
-            provider_name = getattr(provider, "name", "unknown").capitalize()
-            model_name = getattr(provider, "model", "unknown")
-            provider_display = f"{provider_name} — {model_name}"
-        except ProviderConfigError:
-            provider_display = "Extraction is not configured"
-        except Exception:
-            provider_display = "Extraction is not configured"
+        provider_name = (os.getenv("LLM_PROVIDER") or "gemini").strip().lower() or "gemini"
+        if provider_name == "fake":
+            provider_display = "Fake — deterministic offline"
+        elif provider_name == "gemini":
+            api_key = (os.getenv("GEMINI_API_KEY") or "").strip()
+            model_name = (os.getenv("GEMINI_EXTRACTION_MODEL") or "models/gemini-flash-latest").strip()
+            provider_display = (
+                f"Gemini — {model_name}" if api_key and not api_key.startswith("your_") else
+                "Gemini — not configured"
+            )
+        else:
+            provider_display = f"{provider_name.capitalize()} — not configured"
 
         st.markdown(f"**Configured LLM provider:** {provider_display}")
                     
