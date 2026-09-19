@@ -1,0 +1,11 @@
+# Add project dependencies here
+python-dotenv
+PyMuPDF
+beautifulsoup4
+streamlit
+pytest
+pydantic
+rank_bm25
+openai
+numpy
+tzdata
