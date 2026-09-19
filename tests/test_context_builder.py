@@ -56,7 +56,7 @@ class TestContextBuilder(unittest.TestCase):
     def test_large_document_front_matter_and_retrieval(self):
         doc_data = {"metadata": {"doc_id": "doc1", "document_type": "rfp_main"}}
         chunks = [
-            {"chunk_id": f"c{i}", "text": "a" * 1000, "metadata": {"page_number": i}} for i in range(1, 20)
+            {"chunk_id": f"c{i}", "text": "a" * 1000, "page_numbers": [i]} for i in range(1, 20)
         ]
         self.registry.register_document(doc_data, chunks)
         self.registry.doc_text["doc1"] = "a" * 20000
@@ -72,6 +72,23 @@ class TestContextBuilder(unittest.TestCase):
         # Should include front matter (c1, c2) + retrieved (c10) + neighbor (c9, c11)
         expected = {"c1", "c2", "c9", "c10", "c11"}
         self.assertEqual(set(cids), expected)
+
+    def test_page_expansion_uses_chunker_page_numbers(self):
+        doc_data = {"metadata": {"doc_id": "doc1", "document_type": "rfp_main"}}
+        chunks = [
+            {"chunk_id": "c1", "text": "front", "page_numbers": [1]},
+            {"chunk_id": "c2", "text": "target", "page_numbers": [2]},
+            {"chunk_id": "c3", "text": "same page", "page_numbers": [2]},
+            {"chunk_id": "c4", "text": "other", "page_numbers": [3]},
+        ]
+        self.registry.register_document(doc_data, chunks)
+        self.registry.doc_text["doc1"] = "a" * 20000
+        self.searcher.mock_results.append({"chunk_id": "c2", "doc_id": "doc1", "score": 1.0})
+
+        builder = ContextBuilder(self.registry, self.searcher)
+        package = builder.build_group("bid1", "products")[0]
+        cids = {package.handle_map[excerpt.handle] for excerpt in package.excerpts}
+        self.assertEqual(cids, {"c1", "c2", "c3"})
 
     def test_page_expansion(self):
         doc_data = {"metadata": {"doc_id": "doc1", "document_type": "rfp_main"}}

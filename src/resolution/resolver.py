@@ -375,6 +375,12 @@ def _as_list(value: Any) -> List[str]:
     return [str(value)]
 
 
+def _as_string(value: Any) -> str:
+    if isinstance(value, list):
+        return "; ".join(str(item) for item in value)
+    return str(value)
+
+
 def _evidence_for(resolution: FieldResolution, registry) -> Evidence:
     chunk_ids: List[str] = []
     excerpts: List[str] = []
@@ -406,7 +412,7 @@ def build_bid_record(bid_id: str, resolutions: Dict[str, FieldResolution], regis
         elif spec.value_kind.value == "list":
             public_value = _as_list(resolution.value)
         else:
-            public_value = resolution.value if isinstance(resolution.value, str) else str(resolution.value)
+            public_value = _as_string(resolution.value)
 
         extracted = ExtractedField(
             normalized_value=public_value,

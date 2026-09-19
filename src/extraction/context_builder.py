@@ -65,6 +65,14 @@ class ContextBuilder:
     def handle_for(self, chunk_id: str) -> str:
         return self._handle_map.get(chunk_id, "")
 
+    @staticmethod
+    def _chunk_pages(chunk: dict) -> List[int]:
+        pages = chunk.get("page_numbers")
+        if pages is not None:
+            return pages
+        page_num = chunk.get("page_number") or chunk.get("metadata", {}).get("page_number")
+        return [page_num] if page_num is not None else []
+
     def build_all(self, bid_id: str) -> Dict[str, List[ContextPackage]]:
         return {g: self.build_group(bid_id, g) for g in config.GROUP_ORDER}
 
@@ -107,8 +115,7 @@ class ContextBuilder:
                 for cid in doc_chunk_ids:
                     chunk = self.registry.chunk_metadata.get(cid)
                     if not chunk: continue
-                    page_num = chunk.get("page_number") or chunk.get("metadata", {}).get("page_number")
-                    if page_num in config.FRONT_MATTER_PAGES:
+                    if any(page in config.FRONT_MATTER_PAGES for page in self._chunk_pages(chunk)):
                         selected_chunk_ids.add(cid)
                         chunk_reasons[cid].add("front_matter")
                         
@@ -138,13 +145,12 @@ class ContextBuilder:
                             
                         if group in config.PAGE_EXPANSION_GROUPS:
                             chunk = self.registry.chunk_metadata.get(cid, {})
-                            chunk_page = chunk.get("page_number") or chunk.get("metadata", {}).get("page_number")
-                            if chunk_page is not None:
+                            chunk_pages = self._chunk_pages(chunk)
+                            if chunk_pages:
                                 for pcid in doc_chunk_ids:
                                     pchunk = self.registry.chunk_metadata.get(pcid)
                                     if pchunk:
-                                        ppage = pchunk.get("page_number") or pchunk.get("metadata", {}).get("page_number")
-                                        if ppage == chunk_page:
+                                        if set(self._chunk_pages(pchunk)).intersection(chunk_pages):
                                             selected_chunk_ids.add(pcid)
                                             chunk_reasons[pcid].add("page_expansion")
                                             

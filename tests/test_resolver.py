@@ -364,6 +364,26 @@ class TestFinalAssembly(unittest.TestCase):
         self.assertTrue(field.evidence.document_refs)
         self.assertEqual(to_public_json(record)["Bid Number"], "ABC-123")
 
+    def test_aggregated_string_field_is_serialized_as_string(self):
+        registry = make_registry([
+            ("main", "rfp_main", None, [
+                ("c1", "Memory: 16GB"),
+                ("c2", "Storage: 256GB"),
+            ]),
+        ])
+        resolver = CandidateResolver(registry)
+        candidates = [
+            ground(registry, "product_specification", "Memory: 16GB", "c1", "Memory: 16GB"),
+            ground(registry, "product_specification", "Storage: 256GB", "c2", "Storage: 256GB"),
+        ]
+        record = build_bid_record(
+            "bidX", resolver.resolve_bid({"product_specification": candidates}), registry
+        )
+
+        specification = to_public_json(record)["Product Specification"]
+        self.assertIsInstance(specification, str)
+        self.assertEqual(set(specification.split("; ")), {"Memory: 16GB", "Storage: 256GB"})
+
     def test_manufacturer_is_not_emitted_as_company_name(self):
         candidates = [ground(self.registry, "mfg_for_registration", "Acme Industrial",
                              "c2", "Manufacturer Name Acme Industrial")]

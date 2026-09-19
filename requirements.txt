@@ -1,5 +1,6 @@
 PyMuPDF
 beautifulsoup4
+python-dotenv
 streamlit
 pytest>=8.0.0
 pytest-cov>=4.1.0

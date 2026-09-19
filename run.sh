@@ -13,6 +13,11 @@ echo "[1/2] Running CLI Extraction Pipeline..."
 echo "------------------------------------------"
 echo "Extraction is executed by the CLI (main.py), not by the dashboard."
 python main.py --bid ../Bid1 --bid ../Bid2
+status=$?
+if [ "$status" -ne 0 ]; then
+    echo "Extraction failed; dashboard will not start."
+    exit "$status"
+fi
 
 echo ""
 echo "[2/2] Starting Observability Dashboard..."

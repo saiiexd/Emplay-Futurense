@@ -155,27 +155,25 @@ venv\Scripts\activate          # Windows
 pip install -r requirements.txt
 ```
 
-## Configuring the LLM provider
+## Configuring the extraction provider
 
-Copy `.env.example` to `.env` (git-ignored) and set one provider. **OpenRouter is
-the active default**; OpenAI and native Mistral are supported alternatives.
+Copy `.env.example` to `.env` (git-ignored) and configure Gemini only when live
+extraction is available. The `fake` provider is deterministic and is used by the
+offline test suite; it makes no network calls.
 
 ```
-LLM_PROVIDER=openrouter
-OPENROUTER_API_KEY=...
-OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
-OPENROUTER_EXTRACTION_MODEL=qwen/qwen3-30b-a3b:free
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=...
+GEMINI_EXTRACTION_MODEL=models/gemini-flash-latest
 ```
 
 | `LLM_PROVIDER` | Variables it reads | Transport |
 |---|---|---|
-| `openrouter` (default) | `OPENROUTER_API_KEY`, `OPENROUTER_BASE_URL`, `OPENROUTER_EXTRACTION_MODEL` | OpenAI-compatible API at `https://openrouter.ai/api/v1`, via the `openai` SDK |
-| `openai` | `OPENAI_API_KEY`, `OPENAI_EXTRACTION_MODEL` | OpenAI directly |
-| `mistral` | `MISTRAL_API_KEY`, `MISTRAL_EXTRACTION_MODEL`, `MISTRAL_BASE_URL` | native `mistralai` SDK |
+| `gemini` (default) | `GEMINI_API_KEY`, `GEMINI_EXTRACTION_MODEL` | Google Gemini via the `google-generativeai` SDK |
+| `fake` | none | deterministic local provider for tests |
 
 Exactly one provider is constructed, and it validates **only its own**
-credentials: selecting `openrouter` never requires an OpenAI or Mistral key, and
-vice versa. There is no silent fallback between providers - a misconfigured
+credentials. There is no silent fallback between providers - a misconfigured
 provider fails loudly.
 
 Provider code is isolated in `src/extraction/llm_client.py`; nothing else imports
@@ -185,13 +183,9 @@ the program exits with a clear message rather than guessing, and **a run whose
 provider calls all fail writes no output file at all**, so a null-filled JSON can
 never be mistaken for a result.
 
-> **OpenRouter keys:** use a normal inference key from
-> <https://openrouter.ai/keys>. A *provisioning/management* key authenticates
-> against `/auth/key` but returns `401 User not found` on `/chat/completions`.
-
 ## Running the whole system
 
-From `Project/`, with `.env` configured, this one command runs everything -
+From `Project/`, with a usable Gemini key and quota in `.env`, this one command runs everything -
 ingestion, chunking, retrieval, context construction, the six LLM extraction
 calls, parsing, grounding, precedence resolution, and final JSON output - for
 both supplied bids:
@@ -217,7 +211,11 @@ key) · `3` the run finished but one or more groups failed at the provider, so
 the output is incomplete rather than a genuine "not found".
 
 > [!WARNING]
-> **Live API Constraint:** The pipeline executes 6 concurrent group calls per bid. The Gemini Free Tier enforces a strict rate limit of 15 Requests Per Minute (RPM) which causes `RateLimitError` and drops extraction groups, preventing successful local JSON generation with free keys. The pipeline handles this gracefully by aborting the failed extraction groups (exit code 3) without manufacturing fake JSON. To fully execute live extraction across all bids, a paid tier or higher-quota Gemini API key is strictly required.
+> **Live API Constraint:** The pipeline executes 6 concurrent group calls per bid. A
+> provider key and sufficient quota are required for live extraction. When the
+> provider is unavailable, the pipeline aborts failed groups without manufacturing
+> a result. The submitted flat artifacts were validated offline and are not live
+> Gemini output.
 
 Options: `--out` (default `data/output`), `--embeddings fake|openai`
 (default `fake`, which keeps runs cheap and deterministic; `openai` enables the
@@ -261,7 +259,7 @@ response that cannot be parsed is reported, not silently dropped.
 pytest
 ```
 
-249 tests, fully offline. They need no API key and make no network calls; the LLM
+The suite is fully offline. It needs no API key and makes no network calls; the LLM
 is replaced by a deterministic fake provider. Coverage includes parsing,
 chunking, retrieval, context construction, prompt rendering and leakage
 protection, response parsing, grounding, normalization, precedence, and the
@@ -288,15 +286,11 @@ replayed from the diagnostics file.
 
 ## Status and limitations
 
-- **Live extraction accuracy is unverified.** The pipeline has been executed
-  against the configured OpenRouter endpoint, but every request was rejected
-  (`401`), so the model never returned a candidate. The provider path, the
-  strict-schema request and the failure handling are therefore exercised;
-  extraction quality is not. Everything else described here is verified offline
-  with a deterministic fake provider over the real documents, from ingestion
-  through resolution. No accuracy figure is claimed because none has been
-  measured. Running the system with a working inference key is the one
-  outstanding step.
+- **Live extraction was not used for the submitted artifacts.** The provider path
+  requires a working Gemini key and available quota. The deterministic fake
+  provider verifies the implemented pipeline offline over the real documents,
+  from ingestion through retrieval, grounding, and resolution. No live-model
+  accuracy claim is made.
 - Printed page labels are not reliably detected, so evidence provenance cites
   chunk and document identifiers rather than printed page numbers.
 - Tables are extracted from PDFs but are not separately chunked; their text

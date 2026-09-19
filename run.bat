@@ -13,6 +13,11 @@ echo [1/2] Running CLI Extraction Pipeline...
 echo ------------------------------------------
 echo Extraction is executed by the CLI (main.py), not by the dashboard.
 python main.py --bid ../Bid1 --bid ../Bid2
+set "status=%errorlevel%"
+if not "%status%"=="0" (
+    echo Extraction failed; dashboard will not start.
+    exit /b %status%
+)
 
 echo.
 echo [2/2] Starting Observability Dashboard...
