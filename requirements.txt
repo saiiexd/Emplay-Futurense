@@ -9,5 +9,3 @@ pydantic
 rank_bm25
 openai
 numpy
-scikit-learn
-mistralai
