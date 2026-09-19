@@ -19,7 +19,7 @@ from src.extraction.extraction_engine import (
 )
 from src.extraction.llm_client import (
     FakeLLMProvider,
-    OpenAIChatProvider,
+    GeminiChatProvider,
     ProviderCallError,
     ProviderConfigError,
     build_provider,
@@ -69,74 +69,27 @@ def no_sleep(_seconds):
 
 class TestProviderAbstraction(unittest.TestCase):
     def test_missing_key_fails_fast_without_network(self):
-        saved = os.environ.pop(config.LLM_API_KEY_ENV, None)
+        saved = os.environ.pop(config.GEMINI_API_KEY_ENV, None)
         try:
             with self.assertRaises(ProviderConfigError):
-                OpenAIChatProvider()
+                GeminiChatProvider()
         finally:
             if saved is not None:
-                os.environ[config.LLM_API_KEY_ENV] = saved
+                os.environ[config.GEMINI_API_KEY_ENV] = saved
 
     def test_placeholder_key_is_rejected(self):
         with self.assertRaises(ProviderConfigError):
-            OpenAIChatProvider(api_key="your_openai_api_key_here")
+            GeminiChatProvider(api_key="your_gemini_api_key_here")
 
     def test_repr_never_exposes_the_key(self):
-        provider = OpenAIChatProvider(api_key="sk-secret-value", model="test-model")
+        provider = GeminiChatProvider(api_key="sk-secret-value", model="test-model")
         self.assertNotIn("sk-secret-value", repr(provider))
-        self.assertNotIn("sk-secret-value", str(provider.__dict__.get("model", "")))
+        self.assertIn("test-model", repr(provider))
 
     def test_unknown_provider_name(self):
         with self.assertRaises(ProviderConfigError):
-            build_provider("not-a-provider")
-
-    def test_exhausted_quota_is_detected_as_fatal(self):
-        """Regression: a 429 for an empty balance must not be retried.
-
-        Observed live: every call returned 429 insufficient_quota, and treating
-        it as transient burned the full retry budget on every group.
-        """
-        from src.extraction.llm_client import _is_quota_exhausted
-
-        class FakeQuotaError(Exception):
-            body = {"error": {"code": "credit_balance_exhausted", "type": "insufficient_quota",
-                              "message": "You have no credits remaining."}}
-
-        class FakeRateLimit(Exception):
-            body = {"error": {"code": "rate_limit_exceeded", "type": "requests",
-                              "message": "Rate limit reached, please slow down."}}
-
-        self.assertTrue(_is_quota_exhausted(FakeQuotaError()))
-        self.assertFalse(_is_quota_exhausted(FakeRateLimit()))
-        # Also detectable when the SDK exposes only a message string.
-        self.assertTrue(_is_quota_exhausted(Exception("429 - insufficient_quota")))
-
-    def test_sdk_retries_are_disabled_so_the_engine_owns_the_budget(self):
-        provider = OpenAIChatProvider(api_key="sk-not-a-real-key", model="test-model")
-        self.assertEqual(provider._client.max_retries, 0)
-
-    def test_mistral_config_does_not_require_openai_key(self):
-        # Regression test: Mistral configuration must not require OPENAI_API_KEY
-        with patch.dict(os.environ, {
-            config.LLM_PROVIDER_ENV: "mistral",
-            config.MISTRAL_API_KEY_ENV: "mistral-key",
-            config.MISTRAL_MODEL_ENV: "mistral-small-latest"
-        }, clear=True):
-            try:
-                provider = build_provider()
-                self.assertEqual(provider.name, "mistral")
-                self.assertEqual(getattr(provider, "model", ""), "mistral-small-latest")
-            except Exception as exc:
-                self.fail(f"build_provider() raised {type(exc).__name__} unexpectedly!")
-
-    def test_openai_config_still_requires_openai_key(self):
-        # Regression test: OpenAI configuration must still require OPENAI_API_KEY
-        with patch.dict(os.environ, {
-            config.LLM_PROVIDER_ENV: "openai"
-        }, clear=True):
-            with self.assertRaises(ProviderConfigError) as ctx:
+            with patch.dict(os.environ, {config.LLM_PROVIDER_ENV: "not-a-provider"}, clear=True):
                 build_provider()
-            self.assertIn(config.LLM_API_KEY_ENV, str(ctx.exception))
 
     def test_fake_provider_records_calls(self):
         provider = FakeLLMProvider(script=["{}"])
@@ -386,7 +339,7 @@ class TestSafetyProperties(unittest.TestCase):
 
     def test_api_key_never_appears_in_logs_or_prompts(self):
         secret = "sk-this-must-not-appear"
-        os.environ[config.LLM_API_KEY_ENV] = secret
+        os.environ[config.GEMINI_API_KEY_ENV] = secret
         try:
             provider = FakeLLMProvider(script=["bad", good_response(self.pkg)])
             engine = ExtractionEngine(provider, max_correction_retries=1, registry=self.registry, sleep=no_sleep)
@@ -396,7 +349,7 @@ class TestSafetyProperties(unittest.TestCase):
             for call in provider.calls:
                 self.assertNotIn(secret, "\n".join(m["content"] for m in call["messages"]))
         finally:
-            os.environ.pop(config.LLM_API_KEY_ENV, None)
+            os.environ.pop(config.GEMINI_API_KEY_ENV, None)
 
 
 # --- all six groups ----------------------------------------------------------

@@ -43,27 +43,12 @@ PROMPT_VERSION = "p4.2.0"
 # ever stored here; only the names of the variables to read.
 LLM_PROVIDER_ENV = "LLM_PROVIDER"
 
-# OpenAI (optional provider)
-LLM_API_KEY_ENV = "OPENAI_API_KEY"
-LLM_MODEL_ENV = "OPENAI_EXTRACTION_MODEL"
-DEFAULT_LLM_MODEL = "gpt-4o"
+# Google Gemini API
+GEMINI_API_KEY_ENV = "GEMINI_API_KEY"
+GEMINI_MODEL_ENV = "GEMINI_EXTRACTION_MODEL"
+DEFAULT_GEMINI_MODEL = "models/gemini-flash-latest"
 
-# Native Mistral (optional provider, uses the mistralai SDK)
-MISTRAL_API_KEY_ENV = "MISTRAL_API_KEY"
-MISTRAL_MODEL_ENV = "MISTRAL_EXTRACTION_MODEL"
-MISTRAL_BASE_URL_ENV = "MISTRAL_BASE_URL"
-DEFAULT_MISTRAL_MODEL = "mistral-small-latest"
-
-# OpenRouter (active provider). OpenRouter exposes an OpenAI-compatible
-# chat/completions API, so it reuses the openai SDK with a different base URL
-# rather than pulling in another vendor SDK.
-OPENROUTER_API_KEY_ENV = "OPENROUTER_API_KEY"
-OPENROUTER_MODEL_ENV = "OPENROUTER_EXTRACTION_MODEL"
-OPENROUTER_BASE_URL_ENV = "OPENROUTER_BASE_URL"
-DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-DEFAULT_OPENROUTER_MODEL = "qwen/qwen3-30b-a3b:free"
-
-DEFAULT_LLM_PROVIDER = "openrouter"
+DEFAULT_LLM_PROVIDER = "gemini"
 
 # Deterministic decoding: temperature 0 and a fixed seed so repeated runs of the
 # same package produce the same extraction as far as the provider allows.

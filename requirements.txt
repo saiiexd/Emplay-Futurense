@@ -1,12 +1,12 @@
-# Add project dependencies here
-python-dotenv
 PyMuPDF
 beautifulsoup4
 streamlit
-pytest
+pytest>=8.0.0
+pytest-cov>=4.1.0
+google-generativeai
 pydantic
 rank_bm25
 openai
 numpy
-tzdata
+scikit-learn
 mistralai

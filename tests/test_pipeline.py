@@ -232,7 +232,7 @@ class TestFullPipelineOffline(unittest.TestCase):
 
     def test_outputs_are_written_without_credentials(self):
         secret = "sk-must-not-be-written"
-        os.environ[config.LLM_API_KEY_ENV] = secret
+        os.environ[config.GEMINI_API_KEY_ENV] = secret
         try:
             with tempfile.TemporaryDirectory() as out_dir:
                 paths = write_outputs(self.result, out_dir)
@@ -242,7 +242,7 @@ class TestFullPipelineOffline(unittest.TestCase):
                 self.assertNotIn(secret, diag_blob)
                 self.assertEqual(len(json.loads(public_blob)), 20)
         finally:
-            os.environ.pop(config.LLM_API_KEY_ENV, None)
+            os.environ.pop(config.GEMINI_API_KEY_ENV, None)
 
     def test_grounding_rejects_fabricated_candidates_from_the_engine(self):
         """A model answer citing a handle it was never given cannot reach resolution."""
