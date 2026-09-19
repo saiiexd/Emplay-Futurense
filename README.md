@@ -210,6 +210,9 @@ resolved, which rule decided it, and which document it came from.
 key) · `3` the run finished but one or more groups failed at the provider, so
 the output is incomplete rather than a genuine "not found".
 
+> [!WARNING]
+> **Live API Constraint:** The pipeline executes 6 concurrent group calls per bid. The Gemini Free Tier enforces a strict rate limit of 15 Requests Per Minute (RPM) which causes `RateLimitError` and drops extraction groups, preventing successful local JSON generation with free keys. The pipeline handles this gracefully by aborting the failed extraction groups (exit code 3) without manufacturing fake JSON. To fully execute live extraction across all bids, a paid tier or higher-quota Gemini API key is strictly required.
+
 Options: `--out` (default `data/output`), `--embeddings fake|openai`
 (default `fake`, which keeps runs cheap and deterministic; `openai` enables the
 real semantic retrieval channel), `--max-correction-retries`.
