@@ -238,22 +238,54 @@ copy .env.example .env                     # then put a real key in .env
 python main.py --bid ../Bid1 --bid ../Bid2
 ```
 
-### One-Click Execution (Backend + Frontend)
+### One-Command Backend + Streamlit
 
-For convenience, you can run both the extraction backend and the Streamlit frontend dashboard in a single command using the provided helper scripts:
+From the `Project/` directory, the helper script runs the complete backend for
+both supplied bids and then starts the Streamlit dashboard. The dashboard is
+started only when the backend exits successfully.
 
-**On Windows (PowerShell/CMD):**
-```cmd
+Before using the one-command live run, configure a provider in `.env` as shown
+above and ensure its credentials and quota are available. The backend does not
+silently fall back to fabricated results when the provider is unavailable.
+
+**Windows PowerShell or Command Prompt:**
+
+```powershell
+cd Project
 .\run.bat
 ```
 
-**On macOS / Linux:**
+**macOS/Linux:**
+
 ```bash
+cd Project
 chmod +x run.sh
 ./run.sh
 ```
 
-These scripts will automatically execute the backend extraction against the sample bids and then launch the interactive dashboard in your browser.
+The scripts perform these steps in order:
+
+1. Run `python main.py --bid ../Bid1 --bid ../Bid2`.
+2. Write the backend JSON and diagnostics to `data/output/`.
+3. Start `streamlit run app.py`.
+
+Once Streamlit starts, open the URL printed in the terminal, normally
+`http://localhost:8501`. The dashboard is an inspection interface for uploaded
+PDF/HTML documents and retrieval results; extraction itself remains in the CLI
+backend.
+
+### Start Streamlit Only
+
+To launch the frontend without running the backend extraction first:
+
+```powershell
+cd Project
+streamlit run app.py
+```
+
+The same command works on macOS/Linux after activating the virtual environment.
+This opens the dashboard at `http://localhost:8501`; upload PDF or HTML files,
+then select **Process Documents** to inspect parsing, chunks, and retrieval.
 
 If the model returns malformed JSON, the original contract is re-sent once with a
 correction message. Transient provider errors retry with bounded backoff. A
