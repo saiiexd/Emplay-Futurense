@@ -1,0 +1,276 @@
+{
+  "bid_id": "Bid1",
+  "fields": {
+    "bid_number": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "title": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "due_date": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "bid_submission_type": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "term_of_bid": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "pre_bid_meeting": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "installation": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "bid_bond_requirement": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "delivery_date": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "payment_terms": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "additional_documentation": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "mfg_for_registration": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "contract_or_cooperative": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "model_no": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "part_no": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "product": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "contact_info": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "company_name": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "bid_summary": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "product_specification": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    }
+  },
+  "rejected_candidates": [],
+  "extraction": {
+    "identity": {
+      "status": "invalid_output",
+      "attempts": 2,
+      "prompt_hash": "a2c982b2aeeb2aa45f9315bfee883b531690dd1e3c9e9bbc041811a8ba94978d",
+      "error": "response is not valid JSON: Unterminated string starting at: line 60 column 20 (char 1272)",
+      "coverage": {},
+      "warnings": []
+    },
+    "schedule": {
+      "status": "invalid_output",
+      "attempts": 2,
+      "prompt_hash": "7c12465ae0477745cb47f04c5d64c6d71ac6debc69bef8df88eebb660739d8f2",
+      "error": "response is not valid JSON: Expecting value: line 12 column 7 (char 243)",
+      "coverage": {},
+      "warnings": []
+    },
+    "terms": {
+      "status": "invalid_output",
+      "attempts": 2,
+      "prompt_hash": "3279ffc0aa1028e2d8cacce2c4d7246d6b1d0ec9157a5e18ca0016d405095b07",
+      "error": "response is not valid JSON: Unterminated string starting at: line 5 column 16 (char 79)",
+      "coverage": {},
+      "warnings": []
+    },
+    "products": {
+      "status": "provider_error",
+      "attempts": 0,
+      "prompt_hash": "a223382b7afafaa2b09edefe65cacd7ea644fc3fca587542fa0fdab7d5e1ec9a",
+      "error": "transient provider failure: RateLimitError",
+      "coverage": {},
+      "warnings": []
+    },
+    "specifications": {
+      "status": "provider_error",
+      "attempts": 0,
+      "prompt_hash": "ad55c76663bcbf805abf6109ffc85f6edc4ce720c866d90a1d3b1ba0a71151d1",
+      "error": "transient provider failure: RateLimitError",
+      "coverage": {},
+      "warnings": []
+    },
+    "contacts_summary": {
+      "status": "provider_error",
+      "attempts": 0,
+      "prompt_hash": "88558ef022ed3b9514062b3287f4af140bcf80ce1e7b803ee04487e55e9511cd",
+      "error": "transient provider failure: RateLimitError",
+      "coverage": {},
+      "warnings": []
+    }
+  }
+}

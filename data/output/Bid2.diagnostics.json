@@ -1,0 +1,276 @@
+{
+  "bid_id": "Bid2",
+  "fields": {
+    "bid_number": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "title": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "due_date": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "bid_submission_type": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "term_of_bid": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "pre_bid_meeting": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "installation": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "bid_bond_requirement": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "delivery_date": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "payment_terms": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "additional_documentation": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "mfg_for_registration": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "contract_or_cooperative": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "model_no": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "part_no": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "product": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "contact_info": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "company_name": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "bid_summary": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    },
+    "product_specification": {
+      "status": "not_found",
+      "rule": "no_candidates",
+      "value": null,
+      "chosen": null,
+      "contributing": [],
+      "superseded": [],
+      "clarifications": [],
+      "conflicts": [],
+      "considered": []
+    }
+  },
+  "rejected_candidates": [],
+  "extraction": {
+    "identity": {
+      "status": "empty_context",
+      "attempts": 0,
+      "prompt_hash": null,
+      "error": null,
+      "coverage": {},
+      "warnings": []
+    },
+    "schedule": {
+      "status": "empty_context",
+      "attempts": 0,
+      "prompt_hash": null,
+      "error": null,
+      "coverage": {},
+      "warnings": []
+    },
+    "terms": {
+      "status": "empty_context",
+      "attempts": 0,
+      "prompt_hash": null,
+      "error": null,
+      "coverage": {},
+      "warnings": []
+    },
+    "products": {
+      "status": "empty_context",
+      "attempts": 0,
+      "prompt_hash": null,
+      "error": null,
+      "coverage": {},
+      "warnings": []
+    },
+    "specifications": {
+      "status": "empty_context",
+      "attempts": 0,
+      "prompt_hash": null,
+      "error": null,
+      "coverage": {},
+      "warnings": []
+    },
+    "contacts_summary": {
+      "status": "empty_context",
+      "attempts": 0,
+      "prompt_hash": null,
+      "error": null,
+      "coverage": {},
+      "warnings": []
+    }
+  }
+}

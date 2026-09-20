@@ -497,6 +497,62 @@ def to_public_json(record: BidRecord) -> Dict[str, Any]:
     return public
 
 
+def _flatten_contact(contact: Dict[str, Any]) -> str:
+    """One contact rendered as ``Name (phone; email)``, skipping missing parts."""
+    name = (contact.get("name") or "").strip()
+    details = "; ".join(
+        str(contact[key]).strip()
+        for key in ("phone", "email")
+        if contact.get(key)
+    )
+    if name and details:
+        return f"{name} ({details})"
+    return name or details
+
+
+def to_flat_json(record: BidRecord) -> Dict[str, Optional[str]]:
+    """The assignment-facing document: 20 labels mapped to a string or ``null``.
+
+    The assignment's example is a two-column ``Fields``/``Value`` table, so every
+    value is a single string. Multi-item fields keep each item verbatim and are
+    joined with ``"; "``; contacts render as ``Name (phone; email)``. Nothing is
+    reworded, and a field with no valid grounded candidate stays ``None``.
+    """
+    flat: Dict[str, Optional[str]] = {}
+    for label, value in to_public_json(record).items():
+        if value is None:
+            flat[label] = None
+        elif isinstance(value, str):
+            flat[label] = value
+        elif isinstance(value, list):
+            parts = [
+                _flatten_contact(item) if isinstance(item, dict) else str(item)
+                for item in value
+            ]
+            parts = [part for part in parts if part]
+            flat[label] = "; ".join(parts) if parts else None
+        else:  # pragma: no cover - the catalog produces no other value kinds
+            flat[label] = str(value)
+    return flat
+
+
+def build_aggregate_document(flat_by_bid: Dict[str, Dict[str, Optional[str]]]) -> Dict[str, Any]:
+    """The single aggregate deliverable: one entry per supplied document set.
+
+    The assignment asks for "a JSON file containing the structured information
+    extracted from each provided document". This collects the per-bid answers
+    into one file without altering any value, so the per-bid artifacts and the
+    aggregate can never disagree.
+    """
+    return {
+        "schema": [spec.assignment_label for spec in FIELD_CATALOG.values()],
+        "bids": [
+            {"bid_id": bid_id, "fields": flat_by_bid[bid_id]}
+            for bid_id in sorted(flat_by_bid)
+        ],
+    }
+
+
 def build_diagnostics(bid_id: str, resolutions: Dict[str, FieldResolution],
                       rejected: List[GroundedCandidate]) -> Dict[str, Any]:
     """Audit trail. Safe to keep provenance here: it never reaches a prompt."""

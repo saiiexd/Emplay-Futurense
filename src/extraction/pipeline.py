@@ -25,8 +25,10 @@ from src.parsers.bid_manager import BidManager
 from src.resolution.resolver import (
     CandidateResolver,
     FieldResolution,
+    build_aggregate_document,
     build_bid_record,
     build_diagnostics,
+    to_flat_json,
     to_public_json,
 )
 from src.retrieval.chunker import DocumentChunker
@@ -60,6 +62,7 @@ class PipelineResult:
     bid_id: str
     record: BidRecord
     public_json: Dict[str, Any]
+    flat_json: Dict[str, Any]
     diagnostics: Dict[str, Any]
     group_results: Dict[str, GroupExtractionResult] = dc_field(default_factory=dict)
     grounded: List[GroundedCandidate] = dc_field(default_factory=list)
@@ -169,6 +172,7 @@ def run_pipeline(bid_dir: str, engine_factory: Callable[[DocumentRegistry], Extr
         bid_id=context.bid_id,
         record=record,
         public_json=to_public_json(record),
+        flat_json=to_flat_json(record),
         diagnostics=diagnostics,
         group_results=group_results,
         grounded=accepted,
@@ -177,18 +181,39 @@ def run_pipeline(bid_dir: str, engine_factory: Callable[[DocumentRegistry], Extr
     )
 
 
+def _write_json(path: str, payload: Any) -> None:
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(payload, handle, indent=2, ensure_ascii=False, default=str)
+        handle.write("\n")
+
+
 def write_outputs(result: PipelineResult, out_dir: str) -> Dict[str, str]:
-    """Write the assignment JSON and the audit trail. Never writes credentials."""
+    """Write one bid's artifacts. Never writes credentials.
+
+    ``<bid>.flat.json``  the assignment answer: 20 labels, string or null
+    ``<bid>.json``       the same answer with typed values (lists, contacts)
+    ``<bid>.diagnostics.json``  the audit trail, kept out of the answer
+    """
     os.makedirs(out_dir, exist_ok=True)
     paths = {
+        "flat": os.path.join(out_dir, f"{result.bid_id}.flat.json"),
         "public": os.path.join(out_dir, f"{result.bid_id}.json"),
         "diagnostics": os.path.join(out_dir, f"{result.bid_id}.diagnostics.json"),
     }
 
-    with open(paths["public"], "w", encoding="utf-8") as handle:
-        json.dump(result.public_json, handle, indent=2, ensure_ascii=False)
-    with open(paths["diagnostics"], "w", encoding="utf-8") as handle:
-        json.dump(result.diagnostics, handle, indent=2, ensure_ascii=False, default=str)
+    _write_json(paths["flat"], result.flat_json)
+    _write_json(paths["public"], result.public_json)
+    _write_json(paths["diagnostics"], result.diagnostics)
 
-    logger.info("wrote %s and %s", paths["public"], paths["diagnostics"])
+    logger.info("wrote %s, %s and %s", paths["flat"], paths["public"], paths["diagnostics"])
     return paths
+
+
+def write_aggregate(results: List[PipelineResult], out_dir: str) -> str:
+    """Write the single aggregate deliverable covering every bid in this run."""
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.join(out_dir, "extracted_data.json")
+    document = build_aggregate_document({r.bid_id: r.flat_json for r in results})
+    _write_json(path, document)
+    logger.info("wrote %s", path)
+    return path

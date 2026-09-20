@@ -1,4 +1,4 @@
-# Environment Variables
+# Environment variables - never commit real credentials
 .env
 
 # Python
@@ -7,37 +7,39 @@ __pycache__/
 *$py.class
 *.so
 .Python
-env/
 build/
 develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 
 # Virtual environments
 venv/
+.venv/
 env/
 ENV/
 
-# Data
-data/input/*
-!data/input/.gitkeep
-data/output/*
-!data/output/.gitkeep
-
+# Generated data
+#
+# data/input/ holds the supplied assignment corpus and IS tracked, so a
+# reviewer can reproduce the run from a clean checkout.
+# data/output/ is generated; only the assignment-facing deliverables and their
+# audit trails are tracked (see the negations below).
 data/cache/
 .embeddings_cache/
 
+data/output/*
+!data/output/.gitkeep
+!data/output/extracted_data.json
+!data/output/*.flat.json
+!data/output/*.diagnostics.json
+
 # Test / tooling artifacts
 .pytest_cache/
+.coverage
+htmlcov/
 tests/tmp_out/
