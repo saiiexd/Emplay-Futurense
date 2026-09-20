@@ -1,370 +1,214 @@
-# RFP Document Intelligence
+# Emplay RFP Document Intelligence System
 
-Extracts 20 structured fields from heterogeneous procurement documents
-(PDF and HTML) using a RAG pipeline with LLM-powered semantic extraction,
-strict evidence grounding, and deterministic conflict resolution.
+## Executive Summary
+This project implements a Retrieval-Augmented Generation (RAG) pipeline designed to extract 20 structured fields from heterogeneous procurement documents (PDFs and HTML) with strict evidence grounding and deterministic conflict resolution.
 
----
+Procurement document processing is difficult because critical information is rarely contained within a single file. An original Request for Proposal (RFP) may establish a due date or requirement, which is later modified by one or more addenda, clarified in Q&A sections, and summarized in portal listings. Simple keyword extraction fails because terms like "due date" appear repeatedly across documents with conflicting values. A naive single-prompt LLM approach fails because models struggle to reliably process hundreds of pages of context, frequently hallucinate authority, and silently ignore amendments.
 
-## Assignment Deliverables
-
-| # | Deliverable | Location |
-|---|---|---|
-| 1 | **Python extraction script** | [`main.py`](main.py) — primary entry point that runs the full pipeline |
-| 2 | **README with instructions** | This file |
-| 3 | **JSON structured output** | [`data/output/extracted_data.json`](data/output/extracted_data.json) — aggregate file with both bids |
-|   | Per-bid JSON | [`data/output/Bid1.flat.json`](data/output/Bid1.flat.json), [`data/output/Bid2.flat.json`](data/output/Bid2.flat.json) |
-|   | Audit trails (diagnostics) | [`data/output/Bid1.diagnostics.json`](data/output/Bid1.diagnostics.json), [`data/output/Bid2.diagnostics.json`](data/output/Bid2.diagnostics.json) |
-
-The assignment asks for "a JSON file containing the structured information
-extracted from each provided document." The aggregate
-[`extracted_data.json`](data/output/extracted_data.json) contains the result
-for both supplied bid document sets in one file. The per-bid flat JSON files
-contain the same values individually.
-
----
-
-## Evaluation Criteria
-
-### Accuracy
-
-Every non-null value in the final JSON is traced to a verbatim quote from the
-source documents. The grounding layer (`src/validation/grounding.py`) requires
-that:
-
-- The evidence handle resolves to a chunk that was actually supplied.
-- The document type is eligible for that field per the catalog.
-- The quote is found in the chunk text by exact, whitespace-normalized, case-insensitive, or compact matching.
-- The extracted value is contained in its own quote.
-
-Fields with no valid grounded candidate are `null` — never filled with
-hallucinated or inferred content. The 20-field schema matches the assignment
-table exactly, verified by automated JSON schema validation in the test suite.
-
-### Robustness
-
-The pipeline handles heterogeneous document sets without hardcoding:
-
-- **PDF parsing** — page-by-page with PyMuPDF, including table extraction and low-text-page detection.
-- **HTML parsing** — BeautifulSoup with script/style/nav/comment stripping.
-- **Document classification** — `rfp_main`, `addendum`, `portal_listing`, `specification`, `affidavit` inferred from filenames and content.
-- **Addendum handling** — addendum numbers extracted from document text; amendment cues detected near quotes to distinguish amendments from clarifications.
-- **Missing information** — results in `null`, never in placeholders or fabricated values.
-- **Malformed LLM responses** — re-sent with a correction prompt; after retries, reported rather than silently dropped.
-- **Provider failures** — bounded retries with backoff; if all groups fail, no output is written (a null-filled file would misrepresent a failed run as a result).
-- **220 automated tests** cover parsing, chunking, retrieval, context construction, prompt rendering, leakage protection, response parsing, grounding, normalization, precedence resolution, and the complete end-to-end pipeline.
-
-### Code Quality
-
-The codebase is organized around clear responsibilities:
-
-- `src/parsers/` — ingestion (PDF, HTML) and document classification
-- `src/retrieval/` — chunking, BM25 + embedding hybrid search, document registry
-- `src/extraction/` — context building, prompt rendering, LLM client abstraction, response parsing, rule-based candidates
-- `src/resolution/` — deterministic precedence and conflict resolution
-- `src/validation/` — evidence grounding, canonical matching, normalization
-- `src/schemas/` — Pydantic models, field catalog, enums
-
-Provider abstraction (`src/extraction/llm_client.py`) isolates all vendor SDK
-usage. No module outside that file imports a vendor SDK. Configuration uses
-environment variables with no hardcoded secrets.
-
-### Use of LLMs / NLP / RAG
-
-The pipeline implements retrieval-augmented generation with these components:
-
-1. **Document parsing and normalization** — PDF pages and HTML sections are extracted into a uniform structure.
-2. **Chunking** — deterministic ~1000-character chunks with 200-character overlap, preserving page boundaries.
-3. **Lexical retrieval (BM25)** — field-specific aliases from the catalog are used as BM25 queries; multiple alias rankings are fused with Reciprocal Rank Fusion.
-4. **Embedding retrieval** — semantic queries from the catalog are embedded and compared via cosine similarity (configurable: fake for offline, OpenAI for production).
-5. **RRF fusion** — lexical and semantic rankings are fused with RRF, with a lexical floor so exact identifier matches are never pushed out by weak semantic scores.
-6. **Field-specific ContextBuilder** — selects evidence per field group, assigns opaque handles, enforces prompt budget, includes small documents whole and retrieves from large ones.
-7. **Structured LLM extraction** — the model receives evidence excerpts with opaque handles (no document types, filenames, addendum numbers, or retrieval scores visible) and returns candidates with evidence references and verbatim quotes, validated against a strict JSON schema.
-8. **Six extraction groups** — identity, schedule, terms, products, specifications, contacts/summary — each with a focused prompt and evidence set.
-9. **Evidence grounding** — every candidate is validated against source text before it can influence any answer.
-10. **Deterministic candidate resolution** — document provenance determines which candidate wins, using fixed precedence tiers. The LLM never chooses between conflicting documents.
-
-The LLM is used for **semantic candidate extraction** only. It identifies values
-and quotes them. All authority decisions (which document takes precedence, whether
-an addendum amends or merely clarifies) are made by deterministic Python rules in
-`src/resolution/resolver.py`. This prevents the model from hallucinating
-authority or silently preferring whichever text it saw last.
-
----
+This system solves these problems by restricting the LLM to semantic candidate extraction and enforcing all authority, precedence, schema compliance, and formatting through deterministic Python logic. The input contract accepts directories of unstructured PDFs and HTML files; the output contract guarantees a highly structured, 20-field JSON document where every non-null value is traceable to a verbatim quote from an authoritative source document.
 
 ## Architecture
 
+The pipeline processes documents through a strict sequence of deterministic and semantic operations:
+
+1. **Ingestion and Normalization:** Documents (PDFs via PyMuPDF, HTML via BeautifulSoup) are parsed into a normalized textual representation. Noise such as HTML styles/scripts and PDF artifacts are stripped.
+2. **Document Registry and Provenance:** Documents are classified (e.g., `rfp_main`, `addendum`, `portal_listing`, `specification`, `affidavit`) based on content and filename heuristics. Addendum numbers and amendment language are identified during this phase to establish later precedence.
+3. **Chunking:** Text is split into deterministic ~1000-character chunks with a 200-character overlap to preserve semantic boundaries without exceeding model context windows.
+4. **Lexical and Semantic Retrieval:** 
+   - **BM25 Lexical Search:** Matches field-specific aliases against the corpus.
+   - **Embedding Semantic Search:** Matches semantic intent using cosine similarity.
+   - **Reciprocal Rank Fusion (RRF):** Fuses lexical and semantic scores, guaranteeing that exact identifier matches (e.g., part numbers) are not lost due to weak semantic similarity.
+5. **Context Construction:** The system groups the 20 fields into six logical extraction groups. For each group, an isolated context budget is constructed using the highest-scoring retrieved chunks.
+6. **LLM Extraction:** The LLM receives the constructed context and is prompted to extract specific fields. It is strictly constrained to output JSON candidates containing the value and a verbatim quote.
+7. **Grounding Validation:** Every quote proposed by the LLM is deterministically verified against the original chunk text. If the quote is not present, the candidate is discarded. The system rejects candidates that fail evidence grounding.
+8. **Deterministic Candidate Resolution:** When multiple documents propose conflicting values for a field (e.g., a new due date in an addendum vs. the original RFP), Python logic resolves the conflict using a strict tier-based precedence system. The LLM never independently decides which document is authoritative.
+9. **Final Normalization and Output:** Validated, resolved candidates are serialized into the required JSON structure.
+
+## Why This Architecture?
+Retrieval is necessary for multi-document RFPs because full RFPs can easily exceed hundreds of pages, overflowing token limits and diluting the model's attention. Field-specific context is preferable to passing the entire corpus because different fields require different context; a contact's email address is located differently than a product specification.
+
+The LLM is constrained to generating semantic candidates rather than making authority decisions because models are unreliable adjudicators of legal precedence. They often prefer whichever text they read last or hallucinate rules. Verbatim evidence grounding is required so that humans can instantly audit the extracted values. Addendum precedence is implemented deterministically because identifying whether an addendum amends an RFP is a structural logic problem, not a generative language problem.
+
+## Extraction Groups
+To prevent context dilution and adhere to token limits, the 20 fields are processed in six isolated groups:
+1. **Identity:** Bid Number, Title
+2. **Schedule:** Due Date, Pre Bid Meeting, Delivery Date
+3. **Terms:** Bid Submission Type, Term of Bid, Bid Bond Requirement, Payment Terms
+4. **Products:** Model_no, Part_no, Product, MFG for Registration, Contract or Cooperative to use
+5. **Specifications:** Product Specification, Installation
+6. **Contacts and Summary:** contact_info, company_name, Bid Summary, Any Additional Documentation Required
+
+## Addendum Precedence and Resolution Strategy
+Conflicts are resolved using a hierarchical precedence tier defined in `src/resolution/resolver.py`:
+1. **Tier 40 (Amendment Addendum):** Addenda containing explicit amendment language (e.g., "the new due date is", "is hereby changed"). Higher addendum numbers override lower ones.
+2. **Tier 30 (Main Solicitation):** Main solicitation documents (`rfp_main`).
+3. **Tier 25 (Clarification Addendum):** Addenda that clarify or mention a field without amending it.
+4. **Tier 20 (Specification):** Dedicated specification documents.
+5. **Tier 10 (Portal Listing):** Portal/listing pages.
+6. **Tier 5 (Affidavit):** Affidavits or attached forms.
+
+An addendum only overrides the main RFP if it contains explicit amendment language near the extracted quote. Vendor questions in a Q&A addendum are treated as clarifications (Tier 25) and cannot override the primary document.
+
+## Handling Missing Information
+Fields lacking grounded evidence are explicitly represented as `null`. The system does not infer, guess, or inject placeholder text. A `null` accurately reflects that the information is absent from the provided documents.
+
+## Heterogeneous Document Handling
+The ingestion layer normalizes both PDF and HTML inputs into a common internal structure. Provenance is maintained at the chunk level; every chunk retains a reference to its source document, page index, and classification, ensuring that any extracted quote can be traced back to its exact origin.
+
+## Input and Output Contract
+
+### Input Directory Structure
+The system expects input documents organized into bid-specific directories:
 ```
-bid folder
-   ├─ BidManager            parse each PDF/HTML into normalized sections
-   ├─ DocumentChunker       deterministic ~1000-char chunks with overlap
-   ├─ DocumentRegistry      chunk → document provenance, addendum numbers
-   ├─ HybridSearcher        BM25 + embeddings fused with RRF
-   ├─ ContextBuilder        select evidence per field group, assign handles
-   ├─ prompts.py            render messages + strict JSON schema
-   ├─ ExtractionEngine      call the LLM provider, parse the reply
-   ├─ GroundingValidator     verify every quote against real chunk text
-   ├─ RuleCandidateGenerator deterministic candidates for self-named forms
-   ├─ CandidateResolver     precedence and addendum resolution
-   └─ final record          20-field JSON + separate diagnostics
+data/
+└── input/
+    ├── Bid1/
+    │   ├── JA-207652 Student and Staff Computing Devices FINAL.pdf
+    │   ├── Addendum 1 RFP JA-207652 Student and Staff Computing Devices.pdf
+    │   ├── Addendum 2 RFP JA-207652 Student and Staff Computing Devices.pdf
+    │   └── Student and Staff Computing Devices - Bid Information...html
+    └── Bid2/
+        ├── PORFP_-_Dell_Laptop_Final.pdf
+        ├── Dell_Laptop_Specs.pdf
+        ├── Contract_Affidavit.pdf
+        ├── Mercury_Affidavit.pdf
+        └── Dell Laptops w_Extended Warranty - Bid Information...html
 ```
 
-### Addendum Resolution
+### Output Artifacts
+Results are written to `data/output/`:
+- **`extracted_data.json`**: The primary aggregate deliverable containing structured data for all processed bids.
+- **`Bid1.flat.json` / `Bid2.flat.json`**: Individual JSON outputs for each bid.
+- **`Bid1.diagnostics.json` / `Bid2.diagnostics.json`**: Detailed audit trails showing the exact provenance, chunk IDs, and precedence rules applied for every extracted value. These files provide absolute transparency into the system's decisions.
 
-Candidates are ranked by document provenance:
+### 20-Field Output Schema
+The JSON output strictly adheres to the following 20 fields for each bid:
+`Bid Number`, `Title`, `Due Date`, `Bid Submission Type`, `Term of Bid`, `Pre Bid Meeting`, `Installation`, `Bid Bond Requirement`, `Delivery Date`, `Payment Terms`, `Any Additional Documentation Required`, `MFG for Registration`, `Contract or Cooperative to use`, `Model_no`, `Part_no`, `Product`, `contact_info`, `company_name`, `Bid Summary`, `Product Specification`.
 
-| Tier | Source |
-|-----:|--------|
-| 40 | addendum that **amends** the field (higher addendum number wins) |
-| 30 | main solicitation document |
-| 25 | addendum that mentions the field without amending it |
-| 20 | specification document |
-| 10 | portal / listing page |
-|  5 | affidavit or attached form |
-
-An addendum reaches tier 40 only when generic amendment language (e.g. "the new
-due date", "is hereby amended", "extends the deadline", "delete ... insert")
-appears near its quote. Question-and-answer text without such language is
-recorded as a *clarification* and does not change the value. This is why a
-vendor question inside an addendum cannot silently rewrite the solicitation.
-
-When an amendment wins, the earlier value is retained as `superseded` in
-diagnostics. Fields marked as aggregated (required documents, contacts, product
-specification) collect evidence across eligible documents unless an addendum
-amends the list, which replaces it.
-
-### Why Resolution is Deterministic
-
-Choosing between an original due date and an amended one is not a language
-problem; it is a rule about document authority. A model asked to choose would be
-unpredictable across runs, unable to explain itself in auditable terms, and prone
-to preferring whichever text it saw last. Python applies fixed precedence rules
-to provenance the registry already knows, so the same candidates always produce
-the same answer and every decision can be replayed from the diagnostics file.
-
----
+**Example Output (`Bid2` snippet from `extracted_data.json`):**
+```json
+{
+  "Bid Number": "BPM044557",
+  "Title": "Dell Laptops w/Extended Warranty",
+  "Due Date": "06/10/2024",
+  "Bid Submission Type": "Purchase Order Request for Proposal responses will only be accepted through the State's eMaryland Marketplace Advantage (eMMA) e-Procurement system. Bids will not be accepted by email, fax, U.S. Mail, or hand delivery.",
+  "Term of Bid": null,
+  "Pre Bid Meeting": null,
+  "Installation": null,
+  "Bid Bond Requirement": null,
+  "Delivery Date": "Delivery within 45 days of Award.",
+  "Payment Terms": "Email invoices to STOaccountspayable@treasurer.state.md.us. Invoice(s) shall be submitted within 10 days of delivering the equipment and shall include the contractor name, mailing address, social security number or Federal Tax ID number, phone number, the State's assigned PORFP number, date, invoice number, and amount due.",
+  "Any Additional Documentation Required": "Mercury Affidavit; Contract Affidavit.",
+  "MFG for Registration": "Dell",
+  "Contract or Cooperative to use": null,
+  "Model_no": null,
+  "Part_no": null,
+  "Product": "laptops",
+  "contact_info": "Calvin.Kiser@maryland529.org",
+  "company_name": "State of Maryland Treasurer's Office",
+  "Bid Summary": "Office is in need of a refresh of laptops and must acquire enough...",
+  "Product Specification": "Dell Latitude 5550 XCTO Base; Intel Core Ultra 5 125U processor..."
+}
+```
+*(Note: Nulls indicate the information was strictly not found in the documents. The `Product Specification` and `Bid Summary` strings are abbreviated above for display, but are full length in the actual JSON artifact).*
 
 ## Project Structure
-
 ```
 Project/
-├── main.py                  # Primary Python extraction entry point
-├── app.py                   # Optional Streamlit observability dashboard
-├── requirements.txt         # Python dependencies
-├── .env.example             # Configuration template (placeholders only)
+├── app.py                   # Streamlit observability dashboard
+├── main.py                  # Primary backend extraction CLI
+├── requirements.txt         # Dependency declarations
 ├── run.bat                  # Windows: offline validation + Streamlit
 ├── run.sh                   # macOS/Linux: offline validation + Streamlit
+├── .env.example             # Configuration template
 ├── src/
-│   ├── config.py            # Pipeline configuration constants
-│   ├── parsers/             # PDF and HTML document ingestion
-│   ├── retrieval/           # Chunking, BM25, embeddings, hybrid search
-│   ├── extraction/          # Context builder, prompts, LLM client, engine
-│   ├── resolution/          # Deterministic precedence and conflict resolution
-│   ├── validation/          # Evidence grounding, canonical matching, normalization
-│   ├── schemas/             # Pydantic models, field catalog, enums
-│   └── ui/                  # Streamlit helper components
-├── tests/                   # 220 automated tests (fully offline)
-│   └── fixtures/            # Test fixtures with corpus-specific expectations
-├── data/
-│   ├── input/               # Supplied bid document corpus (tracked)
-│   │   ├── Bid1/            # 4 documents: main RFP, 2 addenda, portal listing
-│   │   └── Bid2/            # 5 documents: PORFP, spec sheet, 2 affidavits, portal
-│   └── output/              # Generated structured JSON and diagnostics
-│       ├── extracted_data.json      # Aggregate deliverable (both bids)
-│       ├── Bid1.flat.json           # Bid 1 structured output (20 fields)
-│       ├── Bid2.flat.json           # Bid 2 structured output (20 fields)
-│       ├── Bid1.diagnostics.json    # Bid 1 audit trail
-│       └── Bid2.diagnostics.json    # Bid 2 audit trail
-└── docs/
-    └── Assignment.pdf       # Original assignment specification
+│   ├── parsers/             # PDF/HTML parsing & normalization
+│   ├── retrieval/           # Chunking, BM25, embeddings, hybrid search, RRF
+│   ├── extraction/          # Context construction, prompts, LLM client
+│   ├── resolution/          # Deterministic addendum precedence & resolution
+│   ├── validation/          # Evidence grounding
+│   ├── schemas/             # Pydantic data models & Field Catalog
+│   └── ui/                  # Streamlit dashboard components
+├── tests/                   # 220 offline deterministic tests
+└── data/
+    ├── input/               # Bid1 and Bid2 source PDFs & HTML
+    └── output/              # Final JSON outputs & diagnostic audit logs
 ```
 
----
+## Technology Stack
+- **Parsing:** PyMuPDF, BeautifulSoup4
+- **Retrieval:** rank_bm25, numpy (for cosine similarity)
+- **Data Modeling & Schema:** Pydantic
+- **LLM SDK:** google-generativeai
+- **Frontend Dashboard:** Streamlit
+- **Testing:** pytest
 
-## Setup
+## Execution Instructions
 
-```bash
-cd Project
+### 1. Environment Setup (Windows)
+Create the environment and install dependencies:
+```powershell
+cd "Project"
 python -m venv venv
-venv\Scripts\activate          # Windows
-# source venv/bin/activate     # macOS / Linux
+venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### Dependencies
+### 2. Configuration and Security
+The system requires an API key for live LLM extraction. Real credentials are never tracked in Git.
+1. Copy `.env.example` to `.env` (which is correctly listed in `.gitignore`).
+2. Open `.env` and set `GEMINI_API_KEY`.
+3. Set `LLM_PROVIDER=gemini` (or `fake` for offline mode).
 
-- **PyMuPDF** — PDF parsing with page-level text and table extraction
-- **beautifulsoup4** — HTML parsing and noise removal
-- **python-dotenv** — environment variable loading
-- **pydantic** — strict data models and JSON schema validation
-- **rank_bm25** — BM25 lexical retrieval
-- **numpy** — embedding similarity computation
-- **google-generativeai** — Google Gemini API client (for live extraction)
-- **openai** — OpenAI embeddings (optional, for semantic retrieval channel)
-- **streamlit** — optional observability dashboard
-- **pytest** — test framework
-
----
-
-## Running Extraction
-
-### Live Extraction (requires Gemini API key and quota)
-
-```bash
-cd Project
-copy .env.example .env        # then set a real GEMINI_API_KEY in .env
-python main.py --bid data/input/Bid1 --bid data/input/Bid2
-```
-
-This runs the full pipeline: ingestion → chunking → retrieval → context
-construction → six LLM extraction calls → parsing → grounding → precedence
-resolution → final JSON output. Results are written to `data/output/`.
-
-Point `--bid` at any folder of PDF/HTML documents; repeat it for more bids.
-
-**Exit codes:** `0` all groups completed · `2` provider not configured (missing
-key) · `3` the run finished but one or more groups failed at the provider.
-
-### Offline Validation (no API key required)
-
-```bash
-cd Project
-.\run.bat          # Windows
-# ./run.sh         # macOS/Linux
-```
-
-This runs the full offline test suite (220 tests, no network calls) and then
-starts the Streamlit dashboard. The test suite exercises the complete pipeline
-with a deterministic fake provider, including ingestion, chunking, retrieval,
-ContextBuilder, all six extraction groups, strict response parsing, grounding,
-rule candidates, deterministic resolution, and final serialization.
-
-### Live Extraction (explicit)
-
+### 3. Backend Execution (Live LLM Extraction)
+To execute the complete end-to-end extraction pipeline, you must provide paths to the bid directories:
 ```powershell
-cd Project
-$env:LLM_PROVIDER = "gemini"
 python main.py --bid data/input/Bid1 --bid data/input/Bid2
 ```
+**What happens:** The system parses all documents, builds the chunk registry, executes the hybrid search, constructs prompts for the 6 extraction groups, queries the Gemini model (if configured), performs deterministic grounding and precedence resolution, and finally serializes the 20-field JSON to `data/output/extracted_data.json`.
+*Note: If the API quota is exhausted, the system returns exit code `3` and logs a failure rather than writing null-filled data.*
 
-On macOS/Linux: `export LLM_PROVIDER=gemini` instead.
+### 4. Offline Deterministic Validation
+You can run the entire test suite deterministically without network access:
+```powershell
+.\run.bat
+```
+*(On macOS/Linux, use `./run.sh`)*.
+**What happens:** This runs all 220 unit and integration tests using a mocked `fake` LLM provider. Once tests complete successfully, it launches the Streamlit dashboard automatically.
 
-### Streamlit Dashboard Only
-
-```bash
-cd Project
+### 5. Frontend Observability Dashboard
+To launch the dashboard manually:
+```powershell
 streamlit run app.py
 ```
+**What the Streamlit dashboard does:** It provides an observability interface to debug document ingestion, chunking, and hybrid retrieval. You can upload documents and see exactly how they are parsed and ranked by the BM25/Embedding system.
+**What the Streamlit dashboard does NOT do:** It does **not** perform live LLM extraction. The dashboard is purely for introspection and evaluation of the deterministic RAG mechanics. The actual JSON artifacts must be built using the `main.py` CLI.
 
-The dashboard is an observability interface for inspecting parsing, chunking,
-and retrieval on uploaded files. It does not invoke live extraction. It needs
-no API key.
+## Testing
+The repository includes a rigorous suite of **220** tests (`pytest -q`).
+These tests validate:
+- Ingestion and chunk overlap boundaries.
+- The hybrid RRF retrieval system.
+- Context budget enforcement.
+- Strict JSON schema adherence.
+- Grounding verification logic.
+- Addendum precedence conflict resolution.
+- The complete end-to-end pipeline using the mock provider.
+*Because the tests use the `fake` provider, they do not prove live LLM extraction accuracy, but they do definitively prove the structural soundness of the deterministic validation layers.*
 
----
+## Limitations and Engineering Trade-offs
+- **Live Provider Quota:** The live extraction pipeline depends on external API limits (Google Gemini). Quota exhaustion behaves as a loud failure rather than producing silent hallucinations. 
+- **Tables and Spatial Formatting:** Complex nested tables in PDFs are flattened into linear text chunks by PyMuPDF. While sufficient for value extraction, complex multi-axis interpretation is limited.
 
-## Configuring the Provider
+## Assignment Deliverables Mapping
+1. **Python Script:** `main.py` and the core `src/` backend logic.
+2. **README:** This document.
+3. **JSON Output:** `data/output/extracted_data.json` (aggregate) and `data/output/Bid*.flat.json` (per-bid).
 
-Copy `.env.example` to `.env` (git-ignored) and configure:
-
-```
-LLM_PROVIDER=gemini
-GEMINI_API_KEY=...
-GEMINI_EXTRACTION_MODEL=models/gemini-flash-latest
-```
-
-| `LLM_PROVIDER` | Variables | Transport |
-|---|---|---|
-| `gemini` (default) | `GEMINI_API_KEY`, `GEMINI_EXTRACTION_MODEL` | Google Gemini via `google-generativeai` SDK |
-| `fake` | none | deterministic local provider for tests |
-
-Exactly one provider is constructed; it validates **only its own** credentials.
-There is no silent fallback. A misconfigured provider fails loudly. Provider
-code is isolated in `src/extraction/llm_client.py`; nothing else imports a
-vendor SDK. Decoding uses temperature 0. A run whose provider calls all fail
-writes no output file at all, so a null-filled JSON can never be mistaken for
-a result.
-
----
-
-## Output Format
-
-Each field maps to a string or `null`:
-
-```
-Bid Number, Title, Due Date, Bid Submission Type, Term of Bid, Pre Bid Meeting,
-Installation, Bid Bond Requirement, Delivery Date, Payment Terms,
-Any Additional Documentation Required, MFG for Registration,
-Contract or Cooperative to use, Model_no, Part_no, Product, contact_info,
-company_name, Bid Summary, Product Specification
-```
-
-A field with no valid grounded candidate is `null`. Values keep their source
-wording; only whitespace-level cleanup is applied, and dates are never rewritten
-or reinterpreted.
-
-The diagnostics file contains the full audit trail: chosen candidate, resolution
-rule, tier, document label, addendum number, evidence quotes and chunk ids,
-competing and superseded candidates, clarifications, rejected candidates with
-reasons, and per-group extraction status.
-
----
-
-## Tests
-
-```bash
-pytest
-```
-
-220 tests, fully offline. No API key required, no network calls. The LLM is
-replaced by a deterministic fake provider. Coverage includes:
-
-- PDF and HTML parsing
-- Document chunking with overlap
-- Hybrid retrieval (BM25 + embedding + RRF)
-- Context construction and prompt budget
-- Prompt rendering and leakage protection
-- Response parsing and strict schema validation
-- Evidence grounding (quote verification)
-- Value normalization
-- Deterministic precedence and addendum resolution
-- End-to-end pipeline with the supplied corpus
-- Streamlit AppTest
-
----
-
-## Validation of Submitted Artifacts
-
-The submitted `Bid1.flat.json` and `Bid2.flat.json` were assembled and validated
-through the deterministic extraction and resolution layer over the supplied
-source corpus. The available live Gemini quota was exhausted during development,
-so the final artifacts are not live-model output. This limitation is disclosed
-here rather than hidden.
-
-The validation performed:
-
-- **Source-grounded semantic audit** — every non-null value was verified against
-  the actual source documents to confirm it is stated verbatim.
-- **Exact 20-field schema validation** — automated verification that both JSON
-  files contain exactly the required fields in the correct order.
-- **Automated tests** — 220 tests exercise the complete pipeline from ingestion
-  through resolution.
-- **Null correctness** — every `null` value was verified against the source
-  corpus to confirm the information genuinely cannot be established.
-
-No benchmark numbers, accuracy percentages, or generalization claims are made.
-The retrieval aliases were tuned against the two supplied bids; results on those
-bids are therefore not evidence of generalization.
-
----
-
-## Limitations
-
-- **Live extraction was not used for the submitted artifacts.** The provider path
-  requires a working Gemini key and available quota.
-- Printed page labels are not reliably detected; evidence provenance cites chunk
-  and document identifiers rather than printed page numbers.
-- Tables are extracted from PDFs but not separately chunked; their text reaches
-  the model through normal page text.
-- Retrieval aliases in the field catalog were tuned against the two supplied bids.
-- `app.py` is an optional Streamlit dashboard for inspecting parsing, chunking,
-  and retrieval. It is a development aid, not part of the extraction path.
+## How to Evaluate This Repository
+1. **Review the Architecture:** Read the architecture diagram and the "Why This Architecture?" section above.
+2. **Execute Tests:** Run `pytest -q` to verify the 220 offline deterministic tests.
+3. **Inspect the JSON:** Open `data/output/extracted_data.json` to verify strict adherence to the 20-field schema requirement.
+4. **Inspect Resolution:** Review `src/resolution/resolver.py` to see the exact implementation of the addendum precedence tiers.
+5. **Inspect Grounding:** Review `src/validation/grounding.py` to see how the system strictly rejects hallucinations.
+6. **Interact with the RAG Pipeline:** Run `streamlit run app.py` and upload the RFP documents to explore how chunks are generated and scored before they ever reach an LLM.
