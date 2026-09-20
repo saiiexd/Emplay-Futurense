@@ -1,0 +1,76 @@
+{
+  "schema": [
+    "Bid Number",
+    "Title",
+    "Due Date",
+    "Bid Submission Type",
+    "Term of Bid",
+    "Pre Bid Meeting",
+    "Installation",
+    "Bid Bond Requirement",
+    "Delivery Date",
+    "Payment Terms",
+    "Any Additional Documentation Required",
+    "MFG for Registration",
+    "Contract or Cooperative to use",
+    "Model_no",
+    "Part_no",
+    "Product",
+    "contact_info",
+    "company_name",
+    "Bid Summary",
+    "Product Specification"
+  ],
+  "bids": [
+    {
+      "bid_id": "Bid1",
+      "fields": {
+        "Bid Number": "JA-207652",
+        "Title": "Student and Staff Computing Devices",
+        "Due Date": "July 9, 2024 at 2:00 PM CST",
+        "Bid Submission Type": "Dallas ISD prefers responses to be submitted online via the iSupplier portal. Manual submissions must be delivered to the Procurement Services Department in a sealed envelope; no fax or email submissions will be accepted.",
+        "Term of Bid": "The term of this proposal shall be for a three (3) year agreement with two (2) successive one (1) year extensions based on the long-range needs of the District and mutual consent of both parties.",
+        "Pre Bid Meeting": "A pre-proposal meeting will be held at 2:00 PM CST via TEAMS video conference on June 10, 2024.",
+        "Installation": "All deliveries and deployments must incorporate white glove services, which include asset decaling, asset reporting, etching, and delivery to varied locations.",
+        "Bid Bond Requirement": null,
+        "Delivery Date": null,
+        "Payment Terms": null,
+        "Any Additional Documentation Required": "M/WBE Compliance Guidelines & Forms; M/WBE Certificates; Affirmative Action, Equal Employment Opportunity or Supplier Diversity Plan; signed, dated and notarized Joint Venture Agreement; signed, dated and notarized Mentor Protege Agreement and Minutes or Prime-Subcontractor Teaming Agreement.",
+        "MFG for Registration": null,
+        "Contract or Cooperative to use": null,
+        "Model_no": null,
+        "Part_no": null,
+        "Product": "laptops; desktops; tablet devices; display monitors",
+        "contact_info": "Jasmine Alzate (JALZATE@dallasisd.org); Procurement Services (972-925-3700; ProcurementCS@dallasisd.org)",
+        "company_name": "Dallas Independent School District",
+        "Bid Summary": "This Request for Proposal (RFP) will be for student and staff computing devices, including laptops, desktops, tablet devices, and display monitors. Vendors may submit proposals for one, several, or all categories of devices required by the District.",
+        "Product Specification": "The specifications listed in this RFP are the minimum hardware requirements for each tier of device required by Dallas ISD. Requirements include 1920-1080 non-touch screen resolution, minimum 16GB RAM DDR5 memory, 802.11AX WiFi, a 4 GB video card where specified, and a 3-year minimum warranty for the applicable laptop tier. All deliveries and deployments must incorporate white glove services."
+      }
+    },
+    {
+      "bid_id": "Bid2",
+      "fields": {
+        "Bid Number": "BPM044557",
+        "Title": "Dell Laptops w/Extended Warranty",
+        "Due Date": "06/10/2024",
+        "Bid Submission Type": "Purchase Order Request for Proposal responses will only be accepted through the State's eMaryland Marketplace Advantage (eMMA) e-Procurement system. Bids will not be accepted by email, fax, U.S. Mail, or hand delivery.",
+        "Term of Bid": null,
+        "Pre Bid Meeting": null,
+        "Installation": null,
+        "Bid Bond Requirement": null,
+        "Delivery Date": "Delivery within 45 days of Award.",
+        "Payment Terms": "Email invoices to STOaccountspayable@treasurer.state.md.us. Invoice(s) shall be submitted within 10 days of delivering the equipment and shall include the contractor name, mailing address, social security number or Federal Tax ID number, phone number, the State's assigned PORFP number, date, invoice number, and amount due.",
+        "Any Additional Documentation Required": "Mercury Affidavit; Contract Affidavit.",
+        "MFG for Registration": "Dell",
+        "Contract or Cooperative to use": "Hardware Master Contract 060B5400007",
+        "Model_no": "Latitude 5550; WD22TB4",
+        "Part_no": "CC7802; WD22TB4",
+        "Product": "Dell Latitude 5550; Dell Thunderbolt 4 Dock - WD22TB4",
+        "contact_info": "Tamaira Hawkins (410-260-7533; thawkins@treasurer.state.md.us); James Simpson (410-260-6063; jsimpson@treasurer.state.md.us)",
+        "company_name": "State of Maryland Treasurer's Office",
+        "Bid Summary": "Office is in need of a refresh of laptops and must acquire enough laptops to accommodate MD529 employees who have been included in our staff as of June 1, 2023.",
+        "Product Specification": "Dell Latitude 5550 XCTO Base; Intel Core Ultra 5 125U processor (12 MB cache, 12 cores, 14 threads, up to 4.3 GHz Turbo); Windows 11 Pro; 16 GB (2 x 8 GB) DDR5 5600 MT/s memory; 256 GB M.2 Gen 4 PCIe NVMe SSD; 15.6-inch FHD 1920x1080 60Hz IPS non-touch display; Intel Wi-Fi 6E AX211 2x2 802.11ax; 3-cell 54 Wh battery; 65W USB Type-C AC adapter; ENERGY STAR Qualified."
+      }
+    }
+  ]
+}
